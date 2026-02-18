@@ -87,7 +87,10 @@ with aba3:
     if st.button("Gerar Visualização de Impressão"):
         st.divider()
         st.markdown("### 📄 LISTA DE EXERCÍCIOS - MATEMÁTICA")
-        
+        st.write("NOME: _________________________________________________ DATA: ___/___/___")
+        st.write("PROFESSOR: ____________________________________________ TURMA: _________")
+        st.write("")
+
         for i, row in questoes_filtradas.iterrows():
             # Cabeçalho da questão
             st.markdown(f"**Questão {i+1}** - *({row['fonte']} / {row['ano']})*")
