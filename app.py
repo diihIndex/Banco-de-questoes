@@ -1,66 +1,63 @@
 import streamlit as st
+import pandas as pd
 
-# Page configuration
-st.set_page_config(page_title='Banco de Questões', layout='wide')
+# Configuração da página
+st.set_page_config(page_title="Gerador de Provas IFCE", layout="wide", page_icon="📚")
 
-# Initialize session state with sample questions
-if 'questions' not in st.session_state:
-    st.session_state.questions = [
-        {'ano': 2020, 'conteudo': 'Razão', 'dificuldade': 'Fácil', 'texto_base': 'Texto exemplo da questão sobre razão.', 'enunciado': 'Qual é a razão entre A e B?', 'alternativas': {'A': 'Alternativa 1', 'B': 'Alternativa 2', 'C': 'Alternativa 3', 'D': 'Alternativa 4', 'E': 'Alternativa 5'}},
-        {'ano': 2021, 'conteudo': 'Regra de Três', 'dificuldade': 'Médio', 'texto_base': 'Texto exemplo da questão sobre regra de três.', 'enunciado': 'Como utilizar a regra de três neste caso?', 'alternativas': {'A': 'Alternativa 1', 'B': 'Alternativa 2', 'C': 'Alternativa 3', 'D': 'Alternativa 4', 'E': 'Alternativa 5'}},
-        {'ano': 2026, 'conteudo': 'Escala', 'dificuldade': 'Difícil', 'texto_base': 'Texto exemplo da questão sobre escala.', 'enunciado': 'Qual é a escala correta a ser usada?', 'alternativas': {'A': 'Alternativa 1', 'B': 'Alternativa 2', 'C': 'Alternativa 3', 'D': 'Alternativa 4', 'E': 'Alternativa 5'}},
+# Inicialização do Banco de Dados com TODAS as questões encontradas
+if 'banco_questoes' not in st.session_state:
+    st.session_state.banco_questoes = [
+        {"id": 1, "fonte": "IFCE", "ano": "2026.1 - Caucaia", "conteudo": "Razão e Proporção", "dificuldade": "Fácil", "texto_base": "Em um determinado setor do IFCE, trabalham 45 pessoas, entre homens e mulheres.", "enunciado": "Se a razão entre o número de homens e o número de mulheres é de 2 para 3, o número de mulheres que trabalham nesse setor é:", "alternativas": ["18", "27", "30", "15", "20"], "gabarito": "27"},
+        {"id": 2, "fonte": "IFCE", "ano": "2026.1 - Caucaia", "conteudo": "Regra de Três Simples", "dificuldade": "Média", "texto_base": "Para realizar a pintura das salas de aula de um campus, 4 pintores levam 12 dias.", "enunciado": "Se fossem contratados mais 2 pintores, o tempo necessário seria de:", "alternativas": ["6 dias", "8 dias", "10 dias", "18 dias", "15 dias"], "gabarito": "8 dias"},
+        {"id": 3, "fonte": "IFCE", "ano": "2026.1 - Fortaleza", "conteudo": "Regra de Três Simples", "dificuldade": "Fácil", "texto_base": "Uma impressora imprime 150 páginas em 10 minutos.", "enunciado": "Quantas páginas imprimirá em 25 minutos?", "alternativas": ["300", "325", "350", "375", "400"], "gabarito": "375"},
+        {"id": 4, "fonte": "IFCE", "ano": "2026.1 - Fortaleza", "conteudo": "Razão", "dificuldade": "Fácil", "texto_base": "Em uma turma com 40 alunos, 12 foram reprovados.", "enunciado": "A razão entre o número de alunos aprovados e o número total de alunos é:", "alternativas": ["3/10", "7/10", "3/7", "7/3", "2/5"], "gabarito": "7/10"},
+        {"id": 5, "fonte": "IFCE", "ano": "2025.1", "conteudo": "Divisão Proporcional", "dificuldade": "Média", "texto_base": "Antônio (3 anos de casa) e Benedito (5 anos de casa) dividem um lucro de R$ 12.000,00 proporcionalmente.", "enunciado": "Qual a parte do lucro que caberá a Benedito?", "alternativas": ["R$ 4.500,00", "R$ 6.000,00", "R$ 7.500,00", "R$ 8.000,00", "R$ 9.000,00"], "gabarito": "R$ 7.500,00"},
+        {"id": 6, "fonte": "IFCE", "ano": "2024.1", "conteudo": "Razão", "dificuldade": "Fácil", "texto_base": "A razão entre livros de Literatura e Matemática é 5 para 2. Há 150 livros de Matemática.", "enunciado": "O número de livros de Literatura é:", "alternativas": ["300", "325", "350", "375", "400"], "gabarito": "375"},
+        {"id": 7, "fonte": "IFCE", "ano": "2024.1", "conteudo": "Regra de Três Simples", "dificuldade": "Fácil", "texto_base": "Utiliza-se 2 copos de suco para cada 5 de água.", "enunciado": "Se forem usados 6 copos de suco, quantos de água serão necessários?", "alternativas": ["10", "12", "15", "18", "20"], "gabarito": "15"},
+        {"id": 8, "fonte": "IFCE", "ano": "2023.1", "conteudo": "Regra de Três Simples", "dificuldade": "Fácil", "texto_base": "Um carro consome 12 litros para 150 km.", "enunciado": "Quantos litros para 250 km?", "alternativas": ["18", "20", "22", "24", "25"], "gabarito": "20"},
+        {"id": 9, "fonte": "IFCE", "ano": "2020.1", "conteudo": "Escala", "dificuldade": "Média", "texto_base": "Mapa na escala 1:500.000. Distância no mapa: 8 cm.", "enunciado": "A distância real entre as cidades em quilômetros é:", "alternativas": ["4 km", "40 km", "400 km", "4.000 km", "40.000 km"], "gabarito": "40 km"},
+        {"id": 10, "fonte": "IFCE", "ano": "2019.1", "conteudo": "Regra de Três Composta", "dificuldade": "Difícil", "texto_base": "5 máquinas, 8h/dia, produzem 1.200 peças em 4 dias.", "enunciado": "Quantas peças 8 máquinas produzirão em 10h/dia durante 5 dias?", "alternativas": ["2.400", "3.000", "3.200", "3.600", "4.000"], "gabarito": "3.000"}
     ]
 
-# Menu options
-menu = st.sidebar.selectbox('Menu', ['Ver Banco de Questões', 'Cadastrar Nova Questão', 'Gerar Atividade', 'Sobre'])
+st.title("🛠️ Banco de Questões Matemática - IFCE")
 
-if menu == 'Ver Banco de Questões':
-    st.title('Banco de Questões')
-    # Filters
-    filter_content = st.selectbox('Filtrar por Conteúdo', ['Todos', 'Razão', 'Regra de Três', 'Escala'])
-    filter_difficulty = st.selectbox('Filtrar por Dificuldade', ['Todos', 'Fácil', 'Médio', 'Difícil'])
-    filter_year = st.selectbox('Filtrar por Ano', ['Todos', 2020, 2021, 2026])
- 
-    # Display questions
-    for question in st.session_state.questions:
-        if (filter_content == 'Todos' or question['conteudo'] == filter_content) and 
-           (filter_difficulty == 'Todos' or question['dificuldade'] == filter_difficulty) and 
-           (filter_year == 'Todos' or question['ano'] == filter_year):
-            st.write(question['texto_base'])
-            st.write(question['enunciado'])
-            for k, v in question['alternativas'].items():
-                st.write(f'{k}: {v}')
+menu = st.sidebar.selectbox("Navegação", ["Início/Banco", "Cadastrar Item", "Gerar Lista"])
 
-elif menu == 'Cadastrar Nova Questão':
-    st.title('Cadastrar Nova Questão')
-    # Form for new question
-    with st.form(key='new_question_form'):
-        fonte = st.text_input('Fonte')
-        ano = st.number_input('Ano', min_value=2000, max_value=2026)
-        conteudo = st.selectbox('Conteúdo', ['Razão', 'Regra de Três', 'Escala'])
-        dificuldade = st.selectbox('Dificuldade', ['Fácil', 'Médio', 'Difícil'])
-        texto_base = st.text_area('Texto Base')
-        enunciado = st.text_area('Enunciado')
-        alternativas = {k: st.text_input(f'Alternativa {k}') for k in ['A', 'B', 'C', 'D', 'E']}
-        submit_button = st.form_submit_button(label='Cadastrar')
-        if submit_button:
-            st.session_state.questions.append({
-                'fonte': fonte,
-                'ano': ano,
-                'conteudo': conteudo,
-                'dificuldade': dificuldade,
-                'texto_base': texto_base,
-                'enunciado': enunciado,
-                'alternativas': alternativas,
-            })
-            st.success('Questão cadastrada com sucesso!')
+if menu == "Início/Banco":
+    st.header("🔍 Itens Cadastrados")
+    df = pd.DataFrame(st.session_state.banco_questoes).drop(columns=['alternativas'])
+    st.dataframe(df, use_container_width=True)
 
-elif menu == 'Gerar Atividade':
-    st.title('Gerar Atividade')
-    # Functionality to generate exams
-    st.write('Função de geração de atividades não implementada.')
+elif menu == "Cadastrar Item":
+    st.header("📝 Cadastrar Nova Questão")
+    with st.form("my_form"):
+        f = st.text_input("Fonte")
+        a = st.text_input("Ano")
+        c = st.selectbox("Conteúdo", ["Razão", "Proporção", "Regra de Três", "Escala", "Outros"])
+        d = st.select_slider("Dificuldade", ["Fácil", "Média", "Difícil"])
+        txt = st.text_area("Texto Base")
+        enun = st.text_area("Enunciado")
+        alt1 = st.text_input("Alt A")
+        alt2 = st.text_input("Alt B")
+        alt3 = st.text_input("Alt C")
+        alt4 = st.text_input("Alt D")
+        alt5 = st.text_input("Alt E")
+        gab = st.selectbox("Gabarito", ["A", "B", "C", "D", "E"])
+        
+        if st.form_submit_button("Salvar"):
+            # Lógica para salvar aqui
+            st.success("Questão salva (simulação)!")
 
-elif menu == 'Sobre':
-    st.title('Sobre')
-    st.write('Esta aplicação permite gerenciar questões de provas do IFCE.')
-    st.write('Versão: 1.0')
+elif menu == "Gerar Lista":
+    st.header("📄 Visualização para Impressão")
+    filtro = st.multiselect("Filtrar por Conteúdo", list(set(q['conteudo'] for q in st.session_state.banco_questoes)))
+    
+    for q in st.session_state.banco_questoes:
+        if not filtro or q['conteudo'] in filtro:
+            st.markdown(f"**({q['fonte']} - {q['ano']})**")
+            st.write(q['texto_base'])
+            st.write(f"**{q['enunciado']}**")
+            letras = ["A", "B", "C", "D", "E"]
+            for i, alt in enumerate(q['alternativas']):
+                st.write(f"{letras[i]}) {alt}")
+            st.write("---")
