@@ -57,9 +57,23 @@ with aba2:
 with aba3:
     st.header("Gerador de Documento")
     
-    col_a, col_b = st.columns(2)
-    temas = col_a.multiselect("Filtrar por Conteúdo", df['conteudo'].unique())
-    niveis = col_b.multiselect("Filtrar por Dificuldade", df['dificuldade'].unique())
+    # Padronização das colunas para evitar o KeyError
+    # Isso transforma 'Conteúdo' em 'conteudo' automaticamente no código
+    df.columns = [c.lower().strip().replace('ú', 'u') for c in df.columns]
+
+    if not df.empty:
+        col_a, col_b = st.columns(2)
+        
+        # Agora usamos 'conteudo' sem medo do acento na planilha
+        opcoes_tema = df['conteudo'].unique()
+        temas = col_a.multiselect("Filtrar por Conteúdo", opcoes_tema)
+        
+        opcoes_nivel = df['dificuldade'].unique()
+        niveis = col_b.multiselect("Filtrar por Dificuldade", opcoes_nivel)
+        
+        # ... (resto do código de filtragem)
+    else:
+        st.warning("O banco de dados está vazio. Cadastre questões primeiro.")
     
     # Filtragem lógica
     questoes_filtradas = df.copy()
