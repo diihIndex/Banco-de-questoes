@@ -85,7 +85,7 @@ elif pagina == "📄 Gerador de Prova":
             </div>
             """
             for i, row in df_prova.iterrows():
-                espaco = " " if row['texto_base'] and row['enunciado'] else ""
+                espaco = " " if row['texto_base'] and row['comando'] else ""
                 html_final += f"""
                 <div class='q-box'>
                     <b>QUESTÃO {i+1} ({row['fonte']} - {row['ano']})</b>
