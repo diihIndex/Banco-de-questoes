@@ -95,4 +95,53 @@ elif pagina == "📄 Gerador de Prova":
                     <ul class='alts'>
                 """
                 alts_list = str(row['alternativas']).split(';')
-                letras_lista = ["a", "b", "c", "d"
+                letras_lista = ["a", "b", "c", "d", "e"]
+                for idx, a in enumerate(alts_list):
+                    if idx < 5:
+                        html_final += f"<li class='alt-item'>{letras_lista[idx]}) {a.strip()}</li>"
+                html_final += "</ul></div>"
+            
+            html_final += "</body></html>"
+
+            st.download_button(label="📥 Baixar Arquivo de Impressão", data=html_final, file_name="prova_ifce.html", mime="text/html")
+
+            # --- PREVISÃO VISUAL (SIMULADOR A4) ---
+            st.markdown("### 👁️ Pré-visualização do Documento")
+            st.markdown("""
+                <style>
+                .a4-page {
+                    background: white; width: 100%; max-width: 800px; margin: 20px auto;
+                    padding: 50px; box-shadow: 0 0 15px rgba(0,0,0,0.2);
+                    border: 1px solid #ccc; color: black; font-family: Arial, sans-serif;
+                }
+                .preview-header { border: 1px solid black; padding: 15px; text-align: center; margin-bottom: 25px; }
+                .preview-q { margin-bottom: 25px; text-align: justify; }
+                </style>
+                """, unsafe_allow_html=True)
+
+            with st.container():
+                st.markdown('<div class="a4-page">', unsafe_allow_html=True)
+                st.markdown(f"""
+                    <div class="preview-header">
+                        <h3 style="margin:0;">LISTA DE EXERCÍCIOS - MATEMÁTICA</h3>
+                        <div style="text-align: left; font-size: 13px; margin-top: 12px;">
+                            <p>ALUNO: ________________________________________ DATA: ____/____/____</p>
+                            <p>PROFESSOR: ____________________________________ TURMA: _________</p>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                for i, row in df_prova.iterrows():
+                    st.markdown(f"**QUESTÃO {i+1} ({row['fonte']} - {row['ano']})**")
+                    espaco = " " if row['texto_base'] and row['enunciado'] else ""
+                    st.markdown(f"{row['texto_base']}{espaco}{row['enunciado']}")
+                    
+                    alts_preview = str(row['alternativas']).split(';')
+                    letras_preview = ["a", "b", "c", "d", "e"]
+                    for idx, alt in enumerate(alts_preview):
+                        if idx < len(letras_preview):
+                            st.write(f"{letras_preview[idx]}) {alt.strip()}")
+                    st.write("")
+                st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.warning("Banco de questões vazio.")
