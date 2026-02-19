@@ -9,13 +9,40 @@ st.set_page_config(page_title="Gestor de Provas IFCE", layout="wide", page_icon=
 conn = st.connection("gsheets", type=GSheetsConnection)
 df_raw = conn.read(ttl=0)
 df = df_raw.copy()
-# Padronização de nomes de colunas
 df.columns = [c.lower().strip().replace('ú', 'u') for c in df.columns]
+
+# --- ESTILO CSS PARA IMPRESSÃO REAL ---
+st.markdown("""
+    <style>
+    @media print {
+        /* Esconde absolutamente tudo que não seja a prova */
+        [data-testid="stSidebar"], 
+        [data-testid="stHeader"], 
+        .stTabs, 
+        .no-print,
+        button,
+        header,
+        footer {
+            display: none !important;
+        }
+        
+        /* Remove espaços em branco do Streamlit */
+        .main .block-container {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        /* Garante que a prova ocupe a página toda */
+        .print-area {
+            display: block !important;
+            width: 100% !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 st.title("📚 Sistema de Gestão de Itens - IFCE")
 
-# --- ABAS ---
-# Usamos o 'key' para tentar manter a aba ativa durante interações
 tab1, tab2, tab3 = st.tabs(["🔍 Visualizar Banco", "📝 Cadastrar Questão", "📄 Gerar Lista/Prova"])
 
 with tab1:
@@ -39,79 +66,74 @@ with tab2:
             nova_q = pd.DataFrame([{"id": len(df) + 1, "fonte": fonte, "ano": ano, "conteudo": conteudo, "dificuldade": dificuldade, "texto_base": txt_base, "enunciado": enun, "alternativas": alts, "gabarito": gab}])
             df_final = pd.concat([df, nova_q], ignore_index=True)
             conn.update(data=df_final)
-            st.success("Salvo com sucesso! Atualize a página para ver no banco.")
+            st.success("Salvo! Atualize a página para atualizar o banco.")
 
 with tab3:
     st.header("Gerador de Documento")
     
     if not df.empty:
-        # Criar uma coluna de exibição amigável para o seletor
-        df['display_name'] = df['id'].astype(str) + " - " + df['conteudo'] + " (" + df['fonte'] + ")"
+        # --- ETAPA 1: FILTRO PRÉVIO ---
+        st.subheader("1. Filtrar Banco")
+        col_f1, col_f2 = st.columns(2)
+        temas_disp = sorted(df['conteudo'].unique())
+        filtro_tema = col_f1.multiselect("Filtrar por Conteúdo", temas_disp)
         
-        st.subheader("1. Selecione as questões na ordem desejada:")
-        # O Multiselect funciona como sua fila de reordenação
-        selecao = st.multiselect(
-            "Clique ou digite para adicionar questões à prova:",
-            options=df['display_name'].tolist(),
-            default=st.session_state.get('last_selection', []),
-            help="A ordem em que você clica é a ordem que aparecerá na prova."
+        niveis_disp = sorted(df['dificuldade'].unique())
+        filtro_nivel = col_f2.multiselect("Filtrar por Dificuldade", niveis_disp)
+
+        # Aplicar filtros ao banco que será exibido no seletor
+        df_filtrado = df.copy()
+        if filtro_tema:
+            df_filtrado = df_filtrado[df_filtrado['conteudo'].isin(filtro_tema)]
+        if filtro_nivel:
+            df_filtrado = df_filtrado[df_filtrado['dificuldade'].isin(filtro_nivel)]
+
+        st.divider()
+
+        # --- ETAPA 2: SELEÇÃO E ORDEM ---
+        st.subheader("2. Selecionar e Ordenar")
+        df_filtrado['display'] = df_filtrado['id'].astype(str) + " | " + df_filtrado['conteudo'] + " | " + df_filtrado['enunciado'].str[:60] + "..."
+        
+        selecionadas = st.multiselect(
+            "Selecione as questões na ordem que deseja (clique para adicionar):",
+            options=df_filtrado['display'].tolist(),
+            help="A ordem dos itens aqui será a ordem da prova."
         )
-        st.session_state['last_selection'] = selecao
 
-        if selecao:
-            # Filtrar e manter a ordem exata da seleção
-            ids_selecionados = [int(item.split(" - ")[0]) for item in selecao]
-            df_prova = df.set_index('id').loc[ids_selecionados].reset_index()
+        if selecionadas:
+            # Pegar os IDs na ordem correta
+            ids_finais = [int(s.split(" | ")[0]) for s in selecionadas]
+            df_prova = df.set_index('id').loc[ids_finais].reset_index()
 
+            st.success(f"{len(df_prova)} questões selecionadas. Use Ctrl+P para imprimir.")
+
+            # --- ÁREA DA PROVA (DENTRO DE UMA DIV ESPECÍFICA) ---
+            st.markdown('<div class="print-area">', unsafe_allow_html=True)
+            
+            st.markdown("### 📄 LISTA DE EXERCÍCIOS - MATEMÁTICA")
+            st.write("NOME: _________________________________________________ DATA: ___/___/___")
+            st.write("PROFESSOR: ____________________________________________ TURMA: _________")
+            st.markdown("---")
+            
+            for i, row in df_prova.iterrows():
+                st.markdown(f"**Questão {i+1}**")
+                st.write(row['texto_base'])
+                st.markdown(f"**{row['enunciado']}**")
+                
+                alts = str(row['alternativas']).split(';')
+                letras = ["a", "b", "c", "d", "e"]
+                for idx, alt in enumerate(alts):
+                    if idx < len(letras):
+                        st.write(f"{letras[idx]}) {alt.strip()}")
+                st.write("")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+            
             st.divider()
-            st.subheader("2. Visualização da Prova")
-            
-            # --- CABEÇALHO DA PROVA NA TELA ---
-            container_prova = st.container()
-            with container_prova:
-                st.markdown("### 📄 LISTA DE EXERCÍCIOS - MATEMÁTICA")
-                st.write("NOME: _________________________________________________ DATA: ___/___/___")
-                st.write("PROFESSOR: ____________________________________________ TURMA: _________")
-                st.markdown("---")
-                
+            with st.expander("Gabarito (não sai na impressão)"):
                 for i, row in df_prova.iterrows():
-                    st.markdown(f"**Questão {i+1}**")
-                    st.write(row['texto_base'])
-                    st.markdown(f"**{row['enunciado']}**")
-                    
-                    alts = str(row['alternativas']).split(';')
-                    letras = ["a", "b", "c", "d", "e"]
-                    for idx, alt in enumerate(alts):
-                        if idx < 5: st.write(f"{letras[idx]}) {alt.strip()}")
-                    st.write("")
-                
-                st.divider()
-                with st.expander("Gabarito"):
-                    for i, row in df_prova.iterrows():
-                        st.write(f"Q{i+1}: {row['gabarito']}")
-
-            # --- BOTÃO DE IMPRESSÃO ---
-            st.info("💡 Para imprimir: Pressione **Ctrl + P** no seu teclado. O menu lateral e botões sumirão automaticamente no papel.")
-            
-            # CSS para esconder o que não é a prova na hora do Ctrl+P
-            st.markdown("""
-                <style>
-                @media print {
-                    div[data-testid="stSidebar"], 
-                    div.stButton, 
-                    header, 
-                    .stTabs, 
-                    .no-print {
-                        display: none !important;
-                    }
-                    .main .block-container {
-                        padding: 0 !important;
-                    }
-                }
-                </style>
-            """, unsafe_allow_html=True)
-            
+                    st.write(f"Q{i+1}: {row['gabarito']}")
         else:
-            st.info("Selecione pelo menos uma questão para visualizar a prova.")
+            st.info("Filtre o conteúdo acima e selecione as questões para gerar a prova.")
     else:
         st.warning("Banco de dados vazio.")
