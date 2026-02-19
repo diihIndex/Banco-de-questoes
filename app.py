@@ -1,7 +1,6 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-import base64
 
 # 1. Configuração da Página
 st.set_page_config(page_title="Gestor IFCE", layout="wide")
@@ -10,9 +9,10 @@ st.set_page_config(page_title="Gestor IFCE", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
 df_raw = conn.read(ttl=0)
 df = df_raw.copy()
+# Padronização de colunas
 df.columns = [c.lower().strip().replace('ú', 'u') for c in df.columns]
 
-# 3. Navegação Lateral (Evita o reset das abas)
+# 3. Navegação Lateral
 st.sidebar.title("Navegação")
 pagina = st.sidebar.radio("Ir para:", ["🔍 Banco de Questões", "📝 Cadastrar Nova", "📄 Gerador de Prova"])
 
@@ -44,7 +44,6 @@ elif pagina == "📄 Gerador de Prova":
     st.header("Gerador de Prova")
     
     if not df.empty:
-        # Filtros (Aqui o filtro NÃO reseta a aba mais!)
         st.subheader("1. Filtros")
         cf1, cf2, cf3 = st.columns(3)
         f_fontes = cf1.multiselect("Fonte", sorted(df['fonte'].unique()))
@@ -57,6 +56,7 @@ elif pagina == "📄 Gerador de Prova":
         if f_niveis: df_f = df_f[df_f['dificuldade'].isin(f_niveis)]
 
         st.subheader("2. Seleção e Ordem")
+        # Criar label para o seletor
         df_f['label'] = df_f['id'].astype(str) + " | " + df_f['fonte'] + " | " + df_f['enunciado'].str[:70] + "..."
         selecionadas = st.multiselect("Escolha as questões na ordem desejada:", options=df_f['label'].tolist())
 
@@ -65,50 +65,64 @@ elif pagina == "📄 Gerador de Prova":
             df_prova = df.set_index('id').loc[ids].reset_index()
 
             # --- CONSTRUÇÃO DO HTML DE IMPRESSÃO ---
-            # Isso cria um documento independente que não sofre interferência do site
             html_prova = f"""
-            <html><head><style>
-                body {{ font-family: 'Arial', sans-serif; padding: 40px; color: #333; }}
-                .header-box {{ border: 2px solid #000; padding: 15px; text-align: center; margin-bottom: 30px; }}
-                .q-box {{ margin-bottom: 25px; page-break-inside: avoid; }}
-                .enunciado {{ font-weight: bold; margin-top: 10px; }}
-                .alts {{ list-style-type: none; padding-left: 0; }}
-                .alt-item {{ margin-bottom: 5px; }}
-                @media print {{ .no-print {{ display: none; }} }}
-            </style></head><body>
-            <div class="header-box">
-                <h2 style="margin:0;">LISTA DE EXERCÍCIOS - MATEMÁTICA</h2>
-                <div style="text-align: left; margin-top: 15px;">
-                    <p>ALUNO: _________________________________________________ DATA: ____/____/____</p>
-                    <p>PROFESSOR: ____________________________________________ TURMA: _________</p>
+            <!DOCTYPE html>
+            <html lang="pt-br">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: 'Arial', sans-serif; padding: 30px; line-height: 1.5; color: #000; }}
+                    .header-box {{ border: 2px solid #000; padding: 15px; text-align: center; margin-bottom: 30px; }}
+                    .q-box {{ margin-bottom: 25px; page-break-inside: avoid; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }}
+                    .enunciado {{ font-weight: bold; margin-top: 10px; display: block; }}
+                    .alts {{ list-style-type: none; padding-left: 0; }}
+                    .alt-item {{ margin-bottom: 5px; }}
+                    @media print {{ .no-print {{ display: none; }} hr {{ display: none; }} }}
+                </style>
+            </head>
+            <body>
+                <div class="header-box">
+                    <h2 style="margin:0;">LISTA DE EXERCÍCIOS - MATEMÁTICA</h2>
+                    <div style="text-align: left; margin-top: 15px;">
+                        <p>ALUNO: _________________________________________________ DATA: ____/____/____</p>
+                        <p>PROFESSOR: ____________________________________________ TURMA: _________</p>
+                    </div>
                 </div>
-            </div>
             """
             for i, row in df_prova.iterrows():
+                txt_base = f"<p>{row['texto_base']}</p>" if row['texto_base'] else ""
                 html_prova += f"""
                 <div class="q-box">
                     <b>QUESTÃO {i+1}</b> ({row['fonte']} - {row['ano']})<br>
-                    <p>{row['texto_base'] if row['texto_base'] else ''}</p>
-                    <div class="enunciado">{row['enunciado']}</div>
+                    {txt_base}
+                    <span class="enunciado">{row['enunciado']}</span>
                     <ul class="alts">
                 """
                 alts_lista = str(row['alternativas']).split(';')
                 letras = ["a", "b", "c", "d", "e"]
                 for idx, a in enumerate(alts_lista):
                     if idx < 5: html_prova += f"<li class='alt-item'>{letras[idx]}) {a.strip()}</li>"
-                html_prova += "</ul></div><hr>"
+                html_prova += "</ul></div>"
             
-            html_prova += "</body><script>window.print();</script></html>"
+            html_prova += "</body></html>"
 
-            # Botão de Impressão (Abre nova aba)
-            b64 = base64.b64encode(html_prova.encode('utf-8')).decode()
-            href = f'<a href="data:text/html;base64,{b64}" target="_blank" style="text-decoration: none;"><button style="background-color: #008CBA; color: white; padding: 15px 32px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px;">🖨️ ABRIR PROVA PARA IMPRESSÃO</button></a>'
-            
             st.markdown("### 3. Finalizar")
-            st.markdown(href, unsafe_allow_html=True)
-            st.info("Clique no botão azul acima. Ele abrirá a prova formatada em uma nova aba já pronta para imprimir ou salvar em PDF.")
             
-            # Preview na tela
-            with st.expander("Ver Preview da Prova"):
+            # BOTÃO DE DOWNLOAD (Substitui o botão de abrir nova aba)
+            st.download_button(
+                label="📥 GERAR ARQUIVO DE IMPRESSÃO",
+                data=html_prova,
+                file_name="prova_matematica.html",
+                mime="text/html",
+                help="Clique para baixar o arquivo. Depois, abra-o e use Ctrl+P para imprimir."
+            )
+            
+            st.info("💡 **Instruções:** Clique no botão acima para baixar a prova. Abra o arquivo baixado no seu navegador e aperte **Ctrl + P**.")
+            
+            # Preview simples na tela
+            with st.expander("Prévia das questões selecionadas"):
                 for i, row in df_prova.iterrows():
-                    st.write(f"Q{i+1}: {row['enunciado'][:100]}...")
+                    st.write(f"**Q{i+1}:** {row['enunciado'][:100]}...")
+
+    else:
+        st.warning("Banco de questões vazio.")
