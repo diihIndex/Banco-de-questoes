@@ -1,116 +1,134 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import random
 
+# Configurações da página
 st.set_page_config(page_title="Gestor de Provas IFCE", layout="wide", page_icon="📝")
+
+# --- ESTILO CSS PARA IMPRESSÃO ---
+st.markdown("""
+    <style>
+    @media print {
+        header, [data-testid="stSidebar"], .stButton, [data-testid="stHeader"], .stTabs, [data-testid="stToolbar"], .no-print {
+            display: none !important;
+        }
+        .main .block-container {
+            padding-top: 0rem !important;
+        }
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 st.title("📚 Sistema de Gestão de Itens - IFCE")
 
-# Conexão com a planilha
+# Conexão com Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
+df_original = conn.read(ttl=0)
 
-def load_data():
-    return conn.read(ttl=0)
+# Limpeza e padronização das colunas
+df = df_original.copy()
+df.columns = [c.lower().strip().replace('ú', 'u') for c in df.columns]
 
-df = load_data()
+# --- ABAS ---
+abas = st.tabs(["🔍 Visualizar Banco", "📝 Cadastrar Questão", "📄 Gerar Lista/Prova"])
 
-# Criação das Abas
-aba1, aba2, aba3 = st.tabs(["🔍 Visualizar Banco", "📝 Cadastrar Questão", "📄 Gerar Lista/Prova"])
-
-with aba1:
+# --- ABA 1: VISUALIZAR ---
+with abas[0]:
     st.header("Questões na Nuvem")
     st.dataframe(df, use_container_width=True)
 
-with aba2:
+# --- ABA 2: CADASTRAR ---
+with abas[1]:
     st.header("Inserir Novo Item")
     with st.form("novo_item"):
         col1, col2 = st.columns(2)
-        fonte = col1.text_input("Fonte (ex: IFCE)")
+        fonte = col1.text_input("Fonte")
         ano = col2.text_input("Ano")
-        conteudo = col1.selectbox("Conteúdo", ["Razão e Proporção", "Regra de Três", "Escala", "Divisão Proporcional", "Outros"])
-        dificuldade = col2.select_slider("Dificuldade", ["Fácil", "Média", "Difícil"])
-        
-        txt_base = st.text_area("Texto Base (Exatamente como no original)")
-        enun = st.text_area("Enunciado (Exatamente como no original)")
-        
-        st.info("Separe as alternativas com ponto e vírgula (;)")
-        alts = st.text_input("Alternativas")
+        conteudo = col1.text_input("Conteúdo")
+        dificuldade = col2.selectbox("Dificuldade", ["Fácil", "Média", "Difícil"])
+        txt_base = st.text_area("Texto Base")
+        enun = st.text_area("Enunciado")
+        alts = st.text_input("Alternativas (separadas por ;)")
         gab = st.text_input("Gabarito")
         
         if st.form_submit_button("Salvar na Planilha"):
-            nova_q = pd.DataFrame([{
-                "id": len(df) + 1,
-                "fonte": fonte,
-                "ano": ano,
-                "conteudo": conteudo,
-                "dificuldade": dificuldade,
-                "texto_base": txt_base,
-                "enunciado": enun,
-                "alternativas": alts,
-                "gabarito": gab
-            }])
+            nova_q = pd.DataFrame([{"id": len(df) + 1, "fonte": fonte, "ano": ano, "conteudo": conteudo, "dificuldade": dificuldade, "texto_base": txt_base, "enunciado": enun, "alternativas": alts, "gabarito": gab}])
             df_final = pd.concat([df, nova_q], ignore_index=True)
             conn.update(data=df_final)
             st.success("Salvo com sucesso!")
             st.balloons()
 
-with aba3:
+# --- ABA 3: GERAR PROVA (COM QUESTÃO ALEATÓRIA) ---
+with abas[2]:
     st.header("Gerador de Documento")
     
-    # Padronização das colunas para evitar o KeyError
-    # Isso transforma 'Conteúdo' em 'conteudo' automaticamente no código
-    df.columns = [c.lower().strip().replace('ú', 'u') for c in df.columns]
-
     if not df.empty:
-        col_a, col_b = st.columns(2)
+        # Filtros principais
+        c1, c2 = st.columns(2)
+        filtro_tema = c1.multiselect("Filtrar por Conteúdo", df['conteudo'].unique(), key="f_tema")
+        filtro_nivel = c2.multiselect("Filtrar por Dificuldade", df['dificuldade'].unique(), key="f_nivel")
         
-        # Agora usamos 'conteudo' sem medo do acento na planilha
-        opcoes_tema = df['conteudo'].unique()
-        temas = col_a.multiselect("Filtrar por Conteúdo", opcoes_tema)
+        # Aplicar filtros
+        df_filtrado = df.copy()
+        if filtro_tema:
+            df_filtrado = df_filtrado[df_filtrado['conteudo'].isin(filtro_tema)]
+        if filtro_nivel:
+            df_filtrado = df_filtrado[df_filtrado['dificuldade'].isin(filtro_nivel)]
         
-        opcoes_nivel = df['dificuldade'].unique()
-        niveis = col_b.multiselect("Filtrar por Dificuldade", opcoes_nivel)
-        
-        # ... (resto do código de filtragem)
-    else:
-        st.warning("O banco de dados está vazio. Cadastre questões primeiro.")
-    
-    # Filtragem lógica
-    questoes_filtradas = df.copy()
-    if temas:
-        questoes_filtradas = questoes_filtradas[questoes_filtradas['conteudo'].isin(temas)]
-    if niveis:
-        questoes_filtradas = questoes_filtradas[questoes_filtradas['dificuldade'].isin(niveis)]
-    
-    st.write(f"Foram encontradas **{len(questoes_filtradas)}** questões com esses filtros.")
-    
-    if st.button("Gerar Visualização de Impressão"):
         st.divider()
-        st.markdown("### 📄 LISTA DE EXERCÍCIOS - MATEMÁTICA")
-        st.write("NOME: _________________________________________________ DATA: ___/___/___")
-        st.write("PROFESSOR: ____________________________________________ TURMA: _________")
-        st.write("")
+        
+        # Opções de Sorteio
+        st.subheader("Configuração da Lista")
+        col_cfg1, col_cfg2 = st.columns(2)
+        
+        modo_selecao = col_cfg1.radio("Modo de seleção:", ["Todas as filtradas", "Sortear questões aleatórias"], key="modo_sel")
+        
+        df_prova = df_filtrado.copy()
+        
+        if modo_selecao == "Sortear questões aleatórias":
+            max_questoes = len(df_filtrado)
+            qtd = col_cfg2.number_input(f"Quantas questões sortear? (Máx: {max_questoes})", min_value=1, max_value=max_questoes, value=min(5, max_questoes))
+            if st.button("🔄 Sortear Novas Questões"):
+                # O clique no botão força o reload e sorteia novamente
+                st.session_state.sorteio = df_filtrado.sample(n=qtd).index.tolist()
+            
+            if "sorteio" in st.session_state and len(st.session_state.sorteio) == qtd:
+                # Se o número sorteado bater com a quantidade pedida, usa o sorteio da memória
+                df_prova = df_filtrado.loc[st.session_state.sorteio]
+            else:
+                # Sorteio inicial
+                df_prova = df_filtrado.sample(n=qtd)
+                st.session_state.sorteio = df_prova.index.tolist()
 
-        for i, row in questoes_filtradas.iterrows():
-            # Cabeçalho da questão
-            st.markdown(f"**Questão {i+1}** - *({row['fonte']} / {row['ano']})*")
+        st.write(f"A lista atual contém **{len(df_prova)}** questões.")
+        
+        if st.button("🖨️ Visualizar Prova para Impressão"):
+            st.markdown("---")
+            # Cabeçalho da Prova
+            st.markdown("### 📄 LISTA DE EXERCÍCIOS - MATEMÁTICA")
+            st.write("NOME: _________________________________________________ DATA: ___/___/___")
+            st.write("PROFESSOR: ____________________________________________ TURMA: _________")
+            st.markdown("---")
             
-            # Texto base e enunciado
-            st.write(row['texto_base'])
-            st.markdown(f"**{row['enunciado']}**")
-            
-            # Formatação das alternativas
-            if isinstance(row['alternativas'], str):
-                lista_alts = row['alternativas'].split(';')
-                letras = ["A", "B", "C", "D", "E"]
-                for idx, alt in enumerate(lista_alts):
-                    if idx < len(letras):
-                        st.write(f"{letras[idx]}) {alt.strip()}")
-            
-            st.write("") # Espaço entre questões
-            st.divider()
-            
-        # Gabarito ao final
-        with st.expander("Clique para ver o Gabarito"):
-            for i, row in questoes_filtradas.iterrows():
-                st.write(f"Questão {i+1}: {row['gabarito']}")
+            # Loop de renderização
+            for i, (idx, row) in enumerate(df_prova.iterrows()):
+                st.markdown(f"**Questão {i+1}** - *({row['fonte']} / {row['ano']})*")
+                st.write(row['texto_base'])
+                st.markdown(f"**{row['enunciado']}**")
+                
+                if isinstance(row['alternativas'], str):
+                    lista_alts = row['alternativas'].split(';')
+                    letras = ["A", "B", "C", "D", "E"]
+                    for l_idx, alt in enumerate(lista_alts):
+                        if l_idx < len(letras):
+                            st.write(f"{letras[l_idx]}) {alt.strip()}")
+                st.write("")
+                st.divider()
+                
+            # Gabarito escondido na tela, mas aparece no final se quiser imprimir
+            with st.expander("Gabarito (não sai na impressão se estiver fechado)"):
+                for i, (idx, row) in enumerate(df_prova.iterrows()):
+                    st.write(f"Q{i+1}: {row['gabarito']}")
+    else:
+        st.warning("Banco de dados vazio.")
