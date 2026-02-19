@@ -56,7 +56,7 @@ elif pagina == "📄 Gerador de Prova":
             if f_niveis: df_f = df_f[df_f['dificuldade'].isin(f_niveis)]
 
         # --- SELEÇÃO ---
-        df_f['label'] = df_f['id'].astype(str) + " | " + df_f['fonte'] + " | " + df_f['enunciado'].str[:70] + "..."
+        df_f['label'] = df_f['ID'].astype(str) + " | " + df_f['Fonte'] + " | " + df_f['Comando'].str[:70] + "..."
         selecionadas = st.multiselect("Escolha as questões na ordem desejada:", options=df_f['label'].tolist())
 
         if selecionadas:
