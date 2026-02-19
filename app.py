@@ -2,19 +2,23 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import random
+import base64
 
 # Configurações da página
 st.set_page_config(page_title="Gestor de Provas IFCE", layout="wide", page_icon="📝")
 
-# --- ESTILO CSS PARA IMPRESSÃO ---
+# --- CONEXÃO E DADOS ---
+conn = st.connection("gsheets", type=GSheetsConnection)
+df_raw = conn.read(ttl=0)
+df = df_raw.copy()
+df.columns = [c.lower().strip().replace('ú', 'u') for c in df.columns]
+
+# --- ESTILO CSS PARA OCULTAR INTERFACE NA IMPRESSÃO ---
 st.markdown("""
     <style>
     @media print {
-        header, [data-testid="stSidebar"], .stButton, [data-testid="stHeader"], .stTabs, [data-testid="stToolbar"], .no-print {
+        header, [data-testid="stSidebar"], .stButton, [data-testid="stHeader"], .stTabs, .no-print {
             display: none !important;
-        }
-        .main .block-container {
-            padding-top: 0rem !important;
         }
     }
     </style>
@@ -22,15 +26,10 @@ st.markdown("""
 
 st.title("📚 Sistema de Gestão de Itens - IFCE")
 
-# Conexão com Google Sheets
-conn = st.connection("gsheets", type=GSheetsConnection)
-df_original = conn.read(ttl=0)
+# Controle de Aba via Session State para evitar redirecionamento
+if 'aba_ativa' not in st.session_state:
+    st.session_state.aba_ativa = 0
 
-# Limpeza e padronização das colunas
-df = df_original.copy()
-df.columns = [c.lower().strip().replace('ú', 'u') for c in df.columns]
-
-# --- ABAS ---
 abas = st.tabs(["🔍 Visualizar Banco", "📝 Cadastrar Questão", "📄 Gerar Lista/Prova"])
 
 # --- ABA 1: VISUALIZAR ---
@@ -57,78 +56,80 @@ with abas[1]:
             df_final = pd.concat([df, nova_q], ignore_index=True)
             conn.update(data=df_final)
             st.success("Salvo com sucesso!")
-            st.balloons()
 
-# --- ABA 3: GERAR PROVA (COM QUESTÃO ALEATÓRIA) ---
+# --- ABA 3: GERAR PROVA ---
 with abas[2]:
     st.header("Gerador de Documento")
     
     if not df.empty:
-        # Filtros principais
+        # Filtros de Seleção
         c1, c2 = st.columns(2)
-        filtro_tema = c1.multiselect("Filtrar por Conteúdo", df['conteudo'].unique(), key="f_tema")
-        filtro_nivel = c2.multiselect("Filtrar por Dificuldade", df['dificuldade'].unique(), key="f_nivel")
+        temas = c1.multiselect("Filtrar Conteúdo", df['conteudo'].unique(), key="m_tema")
+        niveis = c2.multiselect("Filtrar Dificuldade", df['dificuldade'].unique(), key="m_nivel")
         
-        # Aplicar filtros
-        df_filtrado = df.copy()
-        if filtro_tema:
-            df_filtrado = df_filtrado[df_filtrado['conteudo'].isin(filtro_tema)]
-        if filtro_nivel:
-            df_filtrado = df_filtrado[df_filtrado['dificuldade'].isin(filtro_nivel)]
-        
+        df_f = df.copy()
+        if temas: df_f = df_f[df_f['conteudo'].isin(temas)]
+        if niveis: df_f = df_f[df_f['dificuldade'].isin(niveis)]
+
         st.divider()
         
-        # Opções de Sorteio
-        st.subheader("Configuração da Lista")
-        col_cfg1, col_cfg2 = st.columns(2)
+        # Opções de Organização
+        col_ord1, col_ord2 = st.columns([1, 2])
+        ordem_manual = col_ord2.text_input("Ordem manual dos IDs (ex: 5, 1, 3):", help="Digite os IDs das questões separados por vírgula para definir a ordem exata.")
         
-        modo_selecao = col_cfg1.radio("Modo de seleção:", ["Todas as filtradas", "Sortear questões aleatórias"], key="modo_sel")
+        if col_ord1.button("🎲 Sortear do Filtro"):
+            questoes_sorteadas = df_f.sample(frac=1).head(10) # Sorteia até 10 do filtro
+            st.session_state.prova_ids = questoes_sorteadas['id'].tolist()
         
-        df_prova = df_filtrado.copy()
-        
-        if modo_selecao == "Sortear questões aleatórias":
-            max_questoes = len(df_filtrado)
-            qtd = col_cfg2.number_input(f"Quantas questões sortear? (Máx: {max_questoes})", min_value=1, max_value=max_questoes, value=min(5, max_questoes))
-            if st.button("🔄 Sortear Novas Questões"):
-                # O clique no botão força o reload e sorteia novamente
-                st.session_state.sorteio = df_filtrado.sample(n=qtd).index.tolist()
-            
-            if "sorteio" in st.session_state and len(st.session_state.sorteio) == qtd:
-                # Se o número sorteado bater com a quantidade pedida, usa o sorteio da memória
-                df_prova = df_filtrado.loc[st.session_state.sorteio]
-            else:
-                # Sorteio inicial
-                df_prova = df_filtrado.sample(n=qtd)
-                st.session_state.sorteio = df_prova.index.tolist()
+        if ordem_manual:
+            try:
+                ids_lista = [int(x.strip()) for x in ordem_manual.split(",")]
+                st.session_state.prova_ids = ids_lista
+            except:
+                st.error("Formato de IDs inválido. Use números separados por vírgula.")
 
-        st.write(f"A lista atual contém **{len(df_prova)}** questões.")
-        
-        if st.button("🖨️ Visualizar Prova para Impressão"):
-            st.markdown("---")
-            # Cabeçalho da Prova
-            st.markdown("### 📄 LISTA DE EXERCÍCIOS - MATEMÁTICA")
-            st.write("NOME: _________________________________________________ DATA: ___/___/___")
-            st.write("PROFESSOR: ____________________________________________ TURMA: _________")
-            st.markdown("---")
+        # Construção da Prova Final
+        if 'prova_ids' in st.session_state:
+            df_prova = df[df['id'].isin(st.session_state.prova_ids)].set_index('id').loc[st.session_state.prova_ids].reset_index()
             
-            # Loop de renderização
-            for i, (idx, row) in enumerate(df_prova.iterrows()):
-                st.markdown(f"**Questão {i+1}** - *({row['fonte']} / {row['ano']})*")
-                st.write(row['texto_base'])
-                st.markdown(f"**{row['enunciado']}**")
-                
-                if isinstance(row['alternativas'], str):
-                    lista_alts = row['alternativas'].split(';')
-                    letras = ["A", "B", "C", "D", "E"]
-                    for l_idx, alt in enumerate(lista_alts):
-                        if l_idx < len(letras):
-                            st.write(f"{letras[l_idx]}) {alt.strip()}")
-                st.write("")
-                st.divider()
-                
-            # Gabarito escondido na tela, mas aparece no final se quiser imprimir
-            with st.expander("Gabarito (não sai na impressão se estiver fechado)"):
-                for i, (idx, row) in enumerate(df_prova.iterrows()):
-                    st.write(f"Q{i+1}: {row['gabarito']}")
+            st.subheader(f"Lista Atual: {len(df_prova)} questões")
+            
+            # Gerador de HTML para Impressão em Nova Aba
+            conteudo_prova_html = f"""
+            <html><head><title>Prova de Matemática</title>
+            <style>
+                body {{ font-family: Arial; padding: 40px; line-height: 1.6; }}
+                .header {{ text-align: center; border-bottom: 2px solid black; margin-bottom: 20px; }}
+                .question {{ margin-bottom: 30px; page-break-inside: avoid; }}
+                .footer {{ margin-top: 50px; font-size: 0.8em; border-top: 1px solid #ccc; }}
+            </style></head><body>
+            <div class='header'>
+                <h2>LISTA DE EXERCÍCIOS - MATEMÁTICA</h2>
+                <p style='text-align: left;'>NOME: _________________________________________________ DATA: ___/___/___</p>
+                <p style='text-align: left;'>PROFESSOR: ____________________________________________ TURMA: _________</p>
+            </div>
+            """
+            
+            for i, row in df_prova.iterrows():
+                conteudo_prova_html += f"<div class='question'><b>Questão {i+1} ({row['fonte']} / {row['ano']})</b><br>"
+                conteudo_prova_html += f"<p>{row['texto_base']}</p><b>{row['enunciado']}</b><br><ul>"
+                alts = row['alternativas'].split(';')
+                letras = ["A", "B", "C", "D", "E"]
+                for idx, alt in enumerate(alts):
+                    if idx < 5: conteudo_prova_html += f"<li>{letras[idx]}) {alt.strip()}</li>"
+                conteudo_prova_html += "</ul></div>"
+            
+            conteudo_prova_html += "</body><script>window.print();</script></html>"
+            
+            # Botão que abre a nova aba com o HTML
+            b64 = base64.b64encode(conteudo_prova_html.encode()).decode()
+            href = f'<a href="data:text/html;base64,{b64}" target="_blank" style="text-decoration: none;"><button style="background-color: #ff4b4b; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">🖨️ ABRIR PROVA PARA IMPRESSÃO</button></a>'
+            st.markdown(href, unsafe_allow_html=True)
+            
+            # Visualização na página
+            st.info("Abaixo está uma prévia. Use o botão vermelho acima para abrir a versão de impressão.")
+            for i, row in df_prova.iterrows():
+                st.markdown(f"**Q{i+1} (ID: {row['id']})** - {row['enunciado'][:50]}...")
+
     else:
         st.warning("Banco de dados vazio.")
