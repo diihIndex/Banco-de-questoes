@@ -63,7 +63,7 @@ elif pagina == "📄 Gerador de Prova":
             ids = [int(s.split(" | ")[0]) for s in selecionadas]
             df_prova = df.set_index('id').loc[ids].reset_index()
 
-            # --- CONSTRUÇÃO DO HTML DE IMPRESSÃO ---
+            # --- CONSTRUÇÃO DO HTML PARA DOWNLOAD ---
             html_final = f"""
             <!DOCTYPE html>
             <html lang="pt-br"><head><meta charset="UTF-8">
@@ -94,46 +94,5 @@ elif pagina == "📄 Gerador de Prova":
                     </div>
                     <ul class='alts'>
                 """
-                alts = str(row['alternativas']).split(';')
-                letras = ["a", "b", "c", "d", "e"]
-                for idx, a in enumerate(alts):
-                    if idx < 5: html_final += f"<li class='alt-item'>{letras[idx]}) {a.strip()}</li>"
-                html_final += "</ul></div>"
-            html_final += "</body></html>"
-
-            st.download_button(label="📥 Baixar Arquivo de Impressão", data=html_final, file_name="prova_ifce.html", mime="text/html")
-
-            # --- PREVISÃO VISUAL (SIMULADOR A4) ---
-            st.markdown("### 👁️ Pré-visualização do Documento")
-            st.markdown("""
-                <style>
-                .a4-page {
-                    background: white; width: 100%; max-width: 800px; margin: 20px auto;
-                    padding: 50px; box-shadow: 0 0 15px rgba(0,0,0,0.2);
-                    border: 1px solid #ccc; color: black; font-family: Arial, sans-serif;
-                }
-                .preview-header { border: 1px solid black; padding: 15px; text-align: center; margin-bottom: 25px; }
-                .preview-q { margin-bottom: 25px; text-align: justify; }
-                </style>
-                """, unsafe_allow_html=True)
-
-            with st.container():
-                st.markdown('<div class="a4-page">', unsafe_allow_html=True)
-                st.markdown(f"""
-                    <div class="preview-header">
-                        <h3 style="margin:0;">LISTA DE EXERCÍCIOS - MATEMÁTICA</h3>
-                        <div style="text-align: left; font-size: 13px; margin-top: 12px;">
-                            <p>ALUNO: ________________________________________ DATA: ____/____/____</p>
-                            <p>PROFESSOR: ____________________________________ TURMA: _________</p>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-
-                for i, row in df_prova.iterrows():
-                    st.markdown(f"**QUESTÃO {i+1} ({row['fonte']} - {row['ano']})**")
-                    espaco = " " if row['texto_base'] and row['enunciado'] else ""
-                    # Texto Base + Comando (sem negrito e na mesma linha)
-                    st.markdown(f"{row['texto_base']}{espaco}{row['enunciado']}")
-                    
-                    alts = str(row['alternativas']).split(';')
-                    letras = ["a", "b",
+                alts_list = str(row['alternativas']).split(';')
+                letras_lista = ["a", "b", "c", "d
