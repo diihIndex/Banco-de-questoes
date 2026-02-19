@@ -90,7 +90,7 @@ elif pagina == "📄 Gerador de Prova":
                 <div class='q-box'>
                     <b>QUESTÃO {i+1} ({row['fonte']} - {row['ano']})</b>
                     <div class='texto-questao'>
-                        {row['texto_base']}{espaco}{row['enunciado']}
+                        {row['texto_base']}{espaco}{row['comando']}
                     </div>
                     <ul class='alts'>
                 """
@@ -133,8 +133,8 @@ elif pagina == "📄 Gerador de Prova":
 
                 for i, row in df_prova.iterrows():
                     st.markdown(f"**QUESTÃO {i+1} ({row['fonte']} - {row['ano']})**")
-                    espaco = " " if row['texto_base'] and row['enunciado'] else ""
-                    st.markdown(f"{row['texto_base']}{espaco}{row['enunciado']}")
+                    espaco = " " if row['texto_base'] and row['comando'] else ""
+                    st.markdown(f"{row['texto_base']}{espaco}{row['comando']}")
                     
                     alts_preview = str(row['alternativas']).split(';')
                     letras_preview = ["a", "b", "c", "d", "e"]
