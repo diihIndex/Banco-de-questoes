@@ -30,7 +30,7 @@ elif pagina == "📝 Cadastrar Nova":
         cont = c3.text_input("Conteúdo")
         dif = st.selectbox("Dificuldade", ["Fácil", "Média", "Difícil"])
         txt = st.text_area("Texto Base")
-        enun = st.text_area("Enunciado")
+        enun = st.text_area("Comando (Enunciado)")
         alts = st.text_input("Alternativas (separadas por ;)")
         gb = st.text_input("Gabarito")
         if st.form_submit_button("Salvar na Planilha"):
@@ -63,34 +63,42 @@ elif pagina == "📄 Gerador de Prova":
             ids = [int(s.split(" | ")[0]) for s in selecionadas]
             df_prova = df.set_index('id').loc[ids].reset_index()
 
-            # --- BOTÃO DE DOWNLOAD ---
-            # Geramos o HTML antecipadamente para o botão de download
+            # --- CONSTRUÇÃO DO HTML DE IMPRESSÃO ---
             html_final = f"""
             <!DOCTYPE html>
             <html lang="pt-br"><head><meta charset="UTF-8">
             <style>
                 @page {{ size: A4; margin: 1.5cm; }}
-                body {{ font-family: Arial; padding: 20px; line-height: 1.5; color: #000; font-size: 12pt; }}
-                .header-box {{ border: 1px solid #000; padding: 15px; text-align: center; margin-bottom: 30px; }}
-                .q-box {{ margin-bottom: 25px; page-break-inside: avoid; border-bottom: 0.5px solid #eee; padding-bottom: 15px; }}
-                .enunciado {{ font-weight: bold; margin-top: 10px; display: block; }}
-                .alts {{ list-style-type: none; padding-left: 0; }}
+                body {{ font-family: Arial, sans-serif; padding: 10px; line-height: 1.4; color: #000; font-size: 11pt; }}
+                .header-box {{ border: 1px solid #000; padding: 10px; text-align: center; margin-bottom: 20px; }}
+                .q-box {{ margin-bottom: 20px; page-break-inside: avoid; }}
+                .texto-questao {{ margin-top: 5px; text-align: justify; }}
+                .alts {{ list-style-type: none; padding-left: 0; margin-top: 8px; }}
+                .alt-item {{ margin-bottom: 2px; }}
             </style></head><body>
             <div class="header-box">
-                <h2 style="margin:0;">LISTA DE EXERCÍCIOS - MATEMÁTICA</h2>
-                <div style="text-align: left; margin-top: 15px;">
+                <h2 style="margin:0; font-size: 14pt;">LISTA DE EXERCÍCIOS - MATEMÁTICA</h2>
+                <div style="text-align: left; margin-top: 10px; font-size: 10pt;">
                     <p>ALUNO: _________________________________________________ DATA: ____/____/____</p>
                     <p>PROFESSOR: ____________________________________________ TURMA: _________</p>
                 </div>
             </div>
             """
             for i, row in df_prova.iterrows():
-                t_base = f"<p style='font-style: italic;'>{row['texto_base']}</p>" if row['texto_base'] else ""
-                html_final += f"<div class='q-box'><b>QUESTÃO {i+1}</b> ({row['fonte']})<br>{t_base}<span class='enunciado'>{row['enunciado']}</span><ul style='list-style:none; padding-left:0;'>"
+                # Lógica: Texto Base + Comando (sem pular linha e sem negrito no comando)
+                espaco = " " if row['texto_base'] and row['enunciado'] else ""
+                html_final += f"""
+                <div class='q-box'>
+                    <b>QUESTÃO {i+1} ({row['fonte']} - {row['ano']})</b>
+                    <div class='texto-questao'>
+                        {row['texto_base']}{espaco}{row['enunciado']}
+                    </div>
+                    <ul class='alts'>
+                """
                 alts = str(row['alternativas']).split(';')
                 letras = ["a", "b", "c", "d", "e"]
                 for idx, a in enumerate(alts):
-                    if idx < 5: html_final += f"<li>{letras[idx]}) {a.strip()}</li>"
+                    if idx < 5: html_final += f"<li class='alt-item'>{letras[idx]}) {a.strip()}</li>"
                 html_final += "</ul></div>"
             html_final += "</body></html>"
 
@@ -98,62 +106,8 @@ elif pagina == "📄 Gerador de Prova":
 
             # --- PREVISÃO VISUAL (SIMULADOR A4) ---
             st.markdown("### 👁️ Pré-visualização do Documento")
-            
-            # CSS para o simulador de folha no Streamlit
             st.markdown("""
                 <style>
                 .a4-page {
-                    background: white;
-                    width: 100%;
-                    max-width: 800px;
-                    margin: 20px auto;
-                    padding: 40px;
-                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                    border: 1px solid #ddd;
-                    color: black;
-                    font-family: Arial, sans-serif;
-                }
-                .preview-header {
-                    border: 1px solid black;
-                    padding: 15px;
-                    text-align: center;
-                    margin-bottom: 20px;
-                }
-                .preview-q { margin-bottom: 20px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
-                </style>
-            """, unsafe_allow_html=True)
-
-            # Renderizando a "Folha"
-            with st.container():
-                st.markdown('<div class="a4-page">', unsafe_allow_html=True)
-                
-                # Cabeçalho no Preview
-                st.markdown(f"""
-                    <div class="preview-header">
-                        <h3 style="margin:0;">LISTA DE EXERCÍCIOS - MATEMÁTICA</h3>
-                        <div style="text-align: left; font-size: 12px; margin-top: 10px;">
-                            <p>ALUNO: ________________________________________ DATA: ____/____/____</p>
-                            <p>PROFESSOR: ____________________________________ TURMA: _________</p>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-
-                # Questões no Preview
-                for i, row in df_prova.iterrows():
-                    st.markdown(f'<div class="preview-q">', unsafe_allow_html=True)
-                    st.markdown(f"**QUESTÃO {i+1}** ({row['fonte']})")
-                    if row['texto_base']:
-                        st.caption(row['texto_base'])
-                    st.markdown(f"**{row['enunciado']}**")
-                    
-                    alts = str(row['alternativas']).split(';')
-                    letras = ["a", "b", "c", "d", "e"]
-                    for idx, alt in enumerate(alts):
-                        if idx < len(letras):
-                            st.write(f"{letras[idx]}) {alt.strip()}")
-                    st.markdown('</div>', unsafe_allow_html=True)
-                
-                st.markdown('</div>', unsafe_allow_html=True)
-
-    else:
-        st.warning("Banco de questões vazio.")
+                    background: white; width: 100%; max-width: 800px; margin: 20px auto;
+                    padding: 50px; box-shadow: 0 0
