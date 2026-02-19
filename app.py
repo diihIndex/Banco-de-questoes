@@ -95,4 +95,4 @@ elif pagina == "📄 Gerador de Prova":
                     <ul class='alts'>
                 """
                 alts_list = str(row['alternativas']).split(';')
-                letras_lista = ["a", "b", "c", "d
+                letras_lista = ["a", "b", "c", "d"
