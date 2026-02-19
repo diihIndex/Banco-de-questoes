@@ -9,7 +9,6 @@ st.set_page_config(page_title="Gestor IFCE", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
 df_raw = conn.read(ttl=0)
 df = df_raw.copy()
-# Padronização de colunas
 df.columns = [c.lower().strip().replace('ú', 'u') for c in df.columns]
 
 # 3. Navegação Lateral
@@ -56,7 +55,6 @@ elif pagina == "📄 Gerador de Prova":
         if f_niveis: df_f = df_f[df_f['dificuldade'].isin(f_niveis)]
 
         st.subheader("2. Seleção e Ordem")
-        # Criar label para o seletor
         df_f['label'] = df_f['id'].astype(str) + " | " + df_f['fonte'] + " | " + df_f['enunciado'].str[:70] + "..."
         selecionadas = st.multiselect("Escolha as questões na ordem desejada:", options=df_f['label'].tolist())
 
@@ -64,33 +62,57 @@ elif pagina == "📄 Gerador de Prova":
             ids = [int(s.split(" | ")[0]) for s in selecionadas]
             df_prova = df.set_index('id').loc[ids].reset_index()
 
-            # --- CONSTRUÇÃO DO HTML DE IMPRESSÃO ---
+            # --- CONSTRUÇÃO DO HTML DE IMPRESSÃO OTIMIZADO PARA A4 ---
             html_prova = f"""
             <!DOCTYPE html>
             <html lang="pt-br">
             <head>
                 <meta charset="UTF-8">
                 <style>
-                    body {{ font-family: 'Arial', sans-serif; padding: 30px; line-height: 1.5; color: #000; }}
-                    .header-box {{ border: 2px solid #000; padding: 15px; text-align: center; margin-bottom: 30px; }}
-                    .q-box {{ margin-bottom: 25px; page-break-inside: avoid; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }}
-                    .enunciado {{ font-weight: bold; margin-top: 10px; display: block; }}
-                    .alts {{ list-style-type: none; padding-left: 0; }}
-                    .alt-item {{ margin-bottom: 5px; }}
-                    @media print {{ .no-print {{ display: none; }} hr {{ display: none; }} }}
+                    /* Configurações de página A4 */
+                    @page {{
+                        size: A4;
+                        margin: 1.5cm;
+                    }}
+                    body {{ 
+                        font-family: 'Arial', sans-serif; 
+                        width: 100%;
+                        margin: 0;
+                        padding: 0;
+                        font-size: 12pt;
+                        color: #000;
+                    }}
+                    .header-box {{ 
+                        border: 1px solid #000; 
+                        padding: 10px; 
+                        text-align: center; 
+                        margin-bottom: 20px;
+                        box-sizing: border-box; /* Garante que a borda não aumente a largura */
+                    }}
+                    .q-box {{ 
+                        margin-bottom: 20px; 
+                        page-break-inside: avoid; 
+                        border-bottom: 0.5px solid #eee; 
+                        padding-bottom: 10px; 
+                    }}
+                    .enunciado {{ font-weight: bold; margin-top: 5px; display: block; }}
+                    .alts {{ list-style-type: none; padding-left: 0; margin-top: 10px; }}
+                    .alt-item {{ margin-bottom: 3px; }}
+                    p {{ margin: 5px 0; }}
+                    hr {{ border: none; border-top: 1px solid #000; margin: 20px 0; }}
                 </style>
             </head>
             <body>
                 <div class="header-box">
-                    <h2 style="margin:0;">LISTA DE EXERCÍCIOS - MATEMÁTICA</h2>
-                    <div style="text-align: left; margin-top: 15px;">
+                    <h2 style="margin:0; font-size: 16pt;">LISTA DE EXERCÍCIOS - MATEMÁTICA</h2>
+                    <div style="text-align: left; margin-top: 10px; font-size: 11pt;">
                         <p>ALUNO: _________________________________________________ DATA: ____/____/____</p>
                         <p>PROFESSOR: ____________________________________________ TURMA: _________</p>
                     </div>
                 </div>
             """
             for i, row in df_prova.iterrows():
-                txt_base = f"<p>{row['texto_base']}</p>" if row['texto_base'] else ""
+                txt_base = f"<p style='font-style: italic;'>{row['texto_base']}</p>" if row['texto_base'] else ""
                 html_prova += f"""
                 <div class="q-box">
                     <b>QUESTÃO {i+1}</b> ({row['fonte']} - {row['ano']})<br>
@@ -108,21 +130,15 @@ elif pagina == "📄 Gerador de Prova":
 
             st.markdown("### 3. Finalizar")
             
-            # BOTÃO DE DOWNLOAD (Substitui o botão de abrir nova aba)
             st.download_button(
-                label="📥 GERAR ARQUIVO DE IMPRESSÃO",
+                label="📥 GERAR ARQUIVO PARA IMPRESSÃO (A4)",
                 data=html_prova,
-                file_name="prova_matematica.html",
-                mime="text/html",
-                help="Clique para baixar o arquivo. Depois, abra-o e use Ctrl+P para imprimir."
+                file_name="prova_ifce_formatada.html",
+                mime="text/html"
             )
             
-            st.info("💡 **Instruções:** Clique no botão acima para baixar a prova. Abra o arquivo baixado no seu navegador e aperte **Ctrl + P**.")
-            
-            # Preview simples na tela
-            with st.expander("Prévia das questões selecionadas"):
-                for i, row in df_prova.iterrows():
-                    st.write(f"**Q{i+1}:** {row['enunciado'][:100]}...")
+            st.success("✅ Arquivo gerado com sucesso!")
+            st.info("Abra o arquivo baixado e use **Ctrl + P**. Certifique-se de que o 'Destino' é sua impressora ou 'Salvar como PDF'.")
 
     else:
         st.warning("Banco de questões vazio.")
