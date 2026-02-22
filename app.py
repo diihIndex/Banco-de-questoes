@@ -11,7 +11,6 @@ try:
     df_raw = conn.read(ttl=0)
     df = df_raw.copy()
     
-    # Normalização de colunas para garantir que 'comando' e 'disciplina' sejam lidos
     df.columns = [
         str(c).lower().strip()
         .replace('ú', 'u').replace('ê', 'e').replace('ã', 'a')
@@ -22,7 +21,7 @@ except Exception as e:
     st.error(f"Erro ao conectar com a planilha: {e}")
     st.stop()
 
-# 3. Definição do Menu Lateral
+# 3. Menu Lateral
 MENU_BANCO = "🔍 Banco de Questões"
 MENU_CADASTRO = "📝 Cadastrar Nova"
 MENU_GERADOR = "📄 Gerador de Prova"
@@ -34,7 +33,7 @@ if opcao == MENU_BANCO:
     st.header("📊 Visualização do Banco de Dados")
     if not df.empty:
         if 'disciplina' in df.columns:
-            disc_filter = st.multiselect("Filtrar visualização por disciplina:", sorted(df['disciplina'].unique()))
+            disc_filter = st.multiselect("Filtrar por disciplina:", sorted(df['disciplina'].unique()))
             df_view = df[df['disciplina'].isin(disc_filter)] if disc_filter else df
             st.dataframe(df_view, use_container_width=True)
         else:
@@ -43,22 +42,21 @@ if opcao == MENU_BANCO:
 # --- PÁGINA: CADASTRAR NOVA ---
 elif opcao == MENU_CADASTRO:
     st.header("📝 Cadastrar Nova Questão")
-    st.info("Preencha os campos abaixo para gerar a linha de dados.")
     with st.form("form_cadastro"):
         c1, c2 = st.columns(2)
         with c1:
             nova_disc = st.selectbox("Disciplina", ["Matemática", "Física", "Química", "Biologia", "Geografia", "História", "Português"])
-            nova_fonte = st.text_input("Fonte (Ex: IFCE Fortaleza)")
+            nova_fonte = st.text_input("Fonte")
         with c2:
             novo_tema = st.text_input("Conteúdo/Tema")
             nova_dif = st.select_slider("Dificuldade", ["Fácil", "Média", "Difícil"])
         
-        novo_texto_base = st.text_area("Texto Base (Opcional)")
+        novo_texto_base = st.text_area("Texto Base")
         novo_comando = st.text_area("Comando da Questão")
         novas_alts = st.text_input("Alternativas (separar por ';')")
         novo_gab = st.text_input("Gabarito")
         
-        if st.form_submit_button("Gerar Código para Planilha"):
+        if st.form_submit_button("Gerar Linha para Planilha"):
             st.code(f"{nova_disc}\t{nova_fonte}\t{novo_tema}\t{novo_texto_base}\t{novo_comando}\t{novas_alts}\t{novo_gab}")
 
 # --- PÁGINA: GERADOR DE PROVA ---
@@ -66,11 +64,10 @@ elif opcao == MENU_GERADOR:
     st.header("📄 Gerador de Material Didático")
     
     if 'comando' not in df.columns:
-        st.error("Coluna 'comando' não encontrada na planilha! Verifique o cabeçalho.")
+        st.error("Coluna 'comando' não encontrada!")
         st.stop()
 
-    # 1. Filtros e Configurações
-    with st.expander("⚙️ 1. Configurações e Filtros", expanded=True):
+    with st.expander("⚙️ Configurações e Filtros", expanded=True):
         f1, f2 = st.columns(2)
         with f1:
             disciplinas = sorted(df['disciplina'].unique()) if 'disciplina' in df.columns else []
@@ -82,66 +79,74 @@ elif opcao == MENU_GERADOR:
         with f2:
             temas = sorted(df_f['conteudo'].unique()) if 'conteudo' in df_f.columns else []
             sel_tema = st.multiselect("Conteúdo/Tema", temas)
-            formato = st.radio("Formato das Questões", ["Objetiva", "Subjetiva"], horizontal=True)
+            formato = st.radio("Formato", ["Objetiva", "Subjetiva"], horizontal=True)
         
-        if sel_tema:
-            df_f = df_f[df_f['conteudo'].isin(sel_tema)]
-        
-        add_gabarito = st.checkbox("Incluir Folha de Respostas ao final")
+        add_gabarito = st.checkbox("Incluir Folha de Respostas")
 
-    # 2. Seleção de Itens
     df_f['label'] = df_f['id'].astype(str) + " | " + df_f['fonte'].astype(str) + " | " + df_f['comando'].astype(str).str[:70] + "..."
-    itens_selecionados = st.multiselect("Selecione as questões para o documento:", options=df_f['label'].tolist())
+    selecionadas = st.multiselect("Selecione as questões:", options=df_f['label'].tolist())
 
-    if itens_selecionados:
-        ids = [int(s.split(" | ")[0]) for s in itens_selecionados]
+    if selecionadas:
+        ids = [int(s.split(" | ")[0]) for s in selecionadas]
         df_prova = df[df['id'].isin(ids)].copy()
 
-        # 3. Construção do HTML
-        html_cabecalho = f"""
-        <div style="border: 2px solid black; padding: 15px; text-align: center; font-family: 'Times New Roman', serif;">
+        # Cabeçalho HTML com MathJax para suporte a LaTeX
+        html_head = """
+        <head>
+            <meta charset='UTF-8'>
+            <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+            <style>
+                body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; }
+                .quest-box { margin-bottom: 20px; page-break-inside: avoid; }
+                .header { border: 2px solid black; padding: 10px; text-align: center; margin-bottom: 20px; }
+            </style>
+        </head>
+        """
+
+        cabecalho = f"""
+        <div class="header">
             <h2 style="margin:0;">{tipo_doc.upper()} DE {", ".join(sel_disc).upper() if sel_disc else "CONTEÚDO"}</h2>
-            <p style="margin:5px;">INSTITUTO FEDERAL DE EDUCAÇÃO, CIÊNCIA E TECNOLOGIA DO CEARÁ</p>
-            <div style="text-align: left; margin-top: 20px; font-size: 12pt;">
+            <p style="margin:5px;">INSTITUTO FEDERAL DO CEARÁ</p>
+            <div style="text-align: left; margin-top: 15px;">
                 NOME: _________________________________________________ TURMA: ________ DATA: ___/___/___
             </div>
-        </div><br>
+        </div>
         """
         
-        html_questoes = ""
-        # Loop com indentação rigorosamente alinhada (4 espaços)
+        corpo = ""
         for i, row in df_prova.reset_index().iterrows():
-            t_base = f"<p><i>{row['texto_base']}</i></p>" if pd.notna(row['texto_base']) and row['texto_base'] != "" else ""
-            html_questoes += f"""
-            <div style="margin-bottom: 25px; font-family: 'Times New Roman', serif; font-size: 12pt;">
+            # Texto base e comando na mesma linha
+            t_base = f"<i>{row['texto_base']}</i> " if pd.notna(row['texto_base']) and str(row['texto_base']).strip() != "" else ""
+            
+            corpo += f"""
+            <div class="quest-box">
                 <b>QUESTÃO {i+1}</b> ({row['fonte']})<br>
-                {t_base}
-                <div style="margin-top:5px;">{row['comando']}</div>
+                {t_base}{row['comando']}
             """
             
             if formato == "Objetiva":
                 alts = str(row['alternativas']).split(';')
-                letras = ['a', 'b', 'c', 'd', 'e']
-                html_questoes += "<ul style='list-style-type: none; padding-left: 20px; margin-top: 10px;'>"
+                letras = ['A', 'B', 'C', 'D', 'E'] # Letras em Maiúsculo
+                corpo += "<ul style='list-style-type: none; padding-left: 20px; margin-top: 8px;'>"
                 for idx, alt in enumerate(alts):
                     if idx < 5:
-                        html_questoes += f"<li style='margin-bottom:5px;'>{letras[idx]}) {alt.strip()}</li>"
-                html_questoes += "</ul>"
+                        corpo += f"<li style='margin-bottom:3px;'>{letras[idx]}) {alt.strip()}</li>"
+                corpo += "</ul>"
             else:
-                html_questoes += "<div style='border: 1px dashed #ccc; height: 180px; margin-top: 15px; border-radius: 5px;'></div>"
+                corpo += "<div style='border: 1px dashed #ccc; height: 150px; margin-top: 10px;'></div>"
             
-            html_questoes += "</div>"
+            corpo += "</div>"
 
-        # 4. Folha de Respostas (Opcional)
         if add_gabarito:
-            html_questoes += "<div style='page-break-before: always; text-align:center;'><h3>FOLHA DE RESPOSTAS</h3>"
+            corpo += "<div style='page-break-before: always; border-top: 1px solid black; padding-top: 10px;'>"
+            corpo += "<h3 style='text-align:center;'>FOLHA DE RESPOSTAS</h3>"
             for i in range(len(df_prova)):
-                html_questoes += f"<p><b>{i+1}:</b> ( A ) ( B ) ( C ) ( D ) ( E )</p>"
-            html_questoes += "</div>"
+                corpo += f"<p><b>{i+1}:</b> ( A ) ( B ) ( C ) ( D ) ( E )</p>"
+            corpo += "</div>"
 
-        html_final = f"<html><head><meta charset='UTF-8'></head><body>{html_cabecalho}{html_questoes}</body></html>"
+        html_final = f"<!DOCTYPE html><html>{html_head}<body>{cabecalho}{corpo}</body></html>"
         
-        # 5. Saída
-        st.download_button("📥 Baixar Documento (HTML/PDF)", data=html_final, file_name="material_ifce.html", mime="text/html")
+        st.download_button("📥 Baixar Documento", data=html_final, file_name="material_ifce.html", mime="text/html")
         st.subheader("👁️ Pré-visualização")
         st.components.v1.html(html_final, height=800, scrolling=True)
