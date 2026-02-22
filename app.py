@@ -84,7 +84,6 @@ elif opcao == MENU_GERADOR:
         
         add_gabarito = st.checkbox("Incluir Folha de Respostas")
 
-    # Seleção de Itens
     df_f['label'] = df_f['id'].astype(str) + " | " + df_f['fonte'].astype(str) + " | " + df_f['comando'].astype(str).str[:70] + "..."
     selecionadas = st.multiselect("Selecione as questões:", options=df_f['label'].tolist())
 
@@ -92,19 +91,16 @@ elif opcao == MENU_GERADOR:
         ids = [int(s.split(" | ")[0]) for s in selecionadas]
         df_prova = df[df['id'].isin(ids)].copy()
 
-        # HTML Head com configuração explícita do MathJax
-        html_head = """
+        # O segredo está no r""" para manter as barras invertidas do LaTeX
+        html_head = r"""
         <head>
             <meta charset='UTF-8'>
             <script>
             window.MathJax = {
               tex: {
-                inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
-                displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
                 processEscapes: true
-              },
-              options: {
-                renderAtStart: true
               }
             };
             </script>
@@ -131,9 +127,9 @@ elif opcao == MENU_GERADOR:
         
         corpo = ""
         for i, row in df_prova.reset_index().iterrows():
-            # Texto base e comando sem quebra de linha (na mesma linha)
             t_base = f"<i>{row['texto_base']}</i> " if pd.notna(row['texto_base']) and str(row['texto_base']).strip() != "" else ""
             
+            # Comando e texto base na mesma linha
             corpo += f"""
             <div class="quest-box">
                 <b>QUESTÃO {i+1}</b> ({row['fonte']})<br>
@@ -151,13 +147,6 @@ elif opcao == MENU_GERADOR:
             else:
                 corpo += "<div style='border: 1px dashed #ccc; height: 160px; margin-top: 15px;'></div>"
             
-            corpo += "</div>"
-
-        if add_gabarito:
-            corpo += "<div style='page-break-before: always; border-top: 2px solid black; padding-top: 20px;'>"
-            corpo += "<h3 style='text-align:center;'>FOLHA DE RESPOSTAS</h3>"
-            for i in range(len(df_prova)):
-                corpo += f"<p><b>{i+1}:</b> ( A ) ( B ) ( C ) ( D ) ( E )</p>"
             corpo += "</div>"
 
         html_final = f"<!DOCTYPE html><html>{html_head}<body>{cabecalho}{corpo}</body></html>"
