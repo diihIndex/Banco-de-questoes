@@ -112,5 +112,48 @@ elif opcao == MENU_GERADOR:
                         </div><br>"""
         
         corpo_questoes = ""
-       for i, row in df_prova.reset_index().iterrows(): 
-    texto_base = f"<p>{row['texto_base']}</p>" if pd.notna(row['texto_base']) else ""
+       if itens_selecionados:
+        ids = [int(s.split(" | ")[0]) for s in itens_selecionados]
+        df_prova = df[df['id'].isin(ids)].copy()
+
+        # 3. CONSTRUÇÃO DO HTML
+        html_cabecalho = f"""
+        <div style="border: 2px solid black; padding: 10px; text-align: center; font-family: 'Times New Roman';">
+            <h3>{tipo_doc.upper()} DE {", ".join(sel_disc).upper() if sel_disc else "CONTEÚDO"}</h3>
+            <p>INSTITUTO FEDERAL DO CEARÁ</p>
+            <div style="text-align: left; margin-top: 20px;">
+                NOME: _________________________________________________ TURMA: ________ DATA: ___/___/___
+            </div>
+        </div><br>
+        """
+        
+        html_questoes = ""
+        # AQUI ESTAVA O ERRO DE INDENTAÇÃO:
+        for i, row in df_prova.reset_index().iterrows():
+            t_base = f"<p><i>{row['texto_base']}</i></p>" if pd.notna(row['texto_base']) and row['texto_base'] != "" else ""
+            html_questoes += f"""
+            <div style="margin-bottom: 25px; font-family: 'Times New Roman';">
+                <b>QUESTÃO {i+1}</b> ({row['fonte']})<br>
+                {t_base}
+                {row['comando']}<br>
+            """
+            
+            if formato == "Objetiva":
+                alts = str(row['alternativas']).split(';')
+                letras = ['a', 'b', 'c', 'd', 'e']
+                html_questoes += "<ul style='list-style-type: none; padding-left: 20px;'>"
+                for idx, alt in enumerate(alts):
+                    if idx < len(letras):
+                        html_questoes += f"<li>{letras[idx]}) {alt.strip()}</li>"
+                html_questoes += "</ul>"
+            else:
+                html_questoes += "<div style='border: 1px dashed #ccc; height: 150px; margin-top: 10px;'></div>"
+            
+            html_questoes += "</div>"
+
+        # 4. DOWNLOAD E PREVIEW
+        html_final = f"<html><body>{html_cabecalho}{html_questoes}</body></html>"
+        
+        st.download_button("📥 Baixar Material", data=html_final, file_name="material_ifce.html", mime="text/html")
+        st.subheader("👁️ Pré-visualização")
+        st.components.v1.html(html_final, height=800, scrolling=True)
