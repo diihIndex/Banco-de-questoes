@@ -148,10 +148,7 @@ with aba_gerar:
             <tr><td style="width:15%; text-align:center;">{img_sme}</td>
             <td style="text-align:center;"><h3>{nome_inst.upper()}</h3><b>PROVA DE {", ".join(sel_disc).upper()}</b></td>
             <td style="width:15%; text-align:center;">{img_esc}</td></tr>
-            <br>
-            <br>
-            <tr><td colspan="2"> ESTUDANTE: ____________________________________________________<br>
-            <br>
+            <tr><td colspan="2"style="padding: 30px 10px;"> ESTUDANTE: ____________________________________________________<br>
             NÚMERO: [____] TURMA: [________] DATA: ___/___/___</td>
             <td class="nota-cell">NOTA: ______/{valor_total}</td></tr>
         </table>"""
