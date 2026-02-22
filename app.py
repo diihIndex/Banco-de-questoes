@@ -148,11 +148,10 @@ with aba_gerar:
             <tr><td style="width:15%; text-align:center;">{img_sme}</td>
             <td style="text-align:center;"><h3>{nome_inst.upper()}</h3><b>PROVA DE {", ".join(sel_disc).upper()}</b></td>
             <td style="width:15%; text-align:center;">{img_esc}</td></tr>
-            <tr><td colspan="2"style="padding: 25px 5px;"> ESTUDANTE: ____________________________________________________<br>
+            <tr><td colspan="2" style="padding: 25px 5px;"> ESTUDANTE: ____________________________________________________<br>
             <br>
             NÚMERO: [____] TURMA: [________] DATA: ___/___/___</td>
-            <td class="nota-cell">NOTA <br> <br> 
-            ______/{valor_total}</td>
+            <td class="nota-cell" style="text-align:center; vertical-align:middle; font-weight:bold;">NOTA <br> <br> ______/{valor_total}</td></tr>
         </table>"""
 
         html_corpo = ""
@@ -168,7 +167,6 @@ with aba_gerar:
             
             comando_html = f'<span class="comando-questao">{row["comando"]}</span>'
             
-            # Montagem compacta do enunciado
             html_corpo += f"""
             <div class="quest-box">
                 <b>QUESTÃO {i+1}</b> ({row["fonte"]}{ano})
@@ -195,7 +193,7 @@ with aba_gerar:
                 <p>● Preencha <b>totalmente</b> o círculo correspondente à alternativa correta.</p>
                 <p>● Marque apenas <b>uma alternativa</b> por questão; rasuras invalidam a resposta.</p>
                 <p>● Não utilize corretivos e evite dobrar este cartão.</p></div>"""
-            cartao_html += f'<div class="cartao-identificacao">NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(48)}</div>NÚMERO: {grid(2)} &nbsp;&nbsp;&nbsp;&nbsp; TURMA: {grid(6)} &nbsp;&nbsp;&nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}</div>'
+            cartao_html += f'<div class="cartao-identificacao">NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(48)}</div>NÚMERO: {grid(2)}      TURMA: {grid(6)}      DATA: {grid(2)}/{grid(2)}/{grid(2)}</div>'
             cartao_html += '<div class="columns-container">'
             num_q = len(df_prova)
             for c in range(0, num_q, 12):
