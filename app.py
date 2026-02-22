@@ -112,4 +112,5 @@ elif opcao == MENU_GERADOR:
                         </div><br>"""
         
         corpo_questoes = ""
-        for i, row in df
+       for i, row in df_prova.reset_index().iterrows(): 
+    texto_base = f"<p>{row['texto_base']}</p>" if pd.notna(row['texto_base']) else ""
