@@ -20,8 +20,7 @@ CSS_ESTILOS = r"""
     .cartao-page { page-break-before: always; border: 2px solid black; padding: 20px; margin-top: 20px; }
     .instrucoes-cartao { border: 1px solid black; padding: 8px; margin-bottom: 15px; font-size: 8pt; background-color: #f9f9f9; }
     
-    /* Espaço solicitado entre cabeçalho e questões */
-    .cartao-identificacao { margin-bottom: 40px; } 
+    .cartao-identificacao { margin-bottom: 45px; } 
     
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 30px; justify-content: flex-start; }
     .column { display: flex; flex-direction: column; border: 1px solid #000; min-width: 220px; }
@@ -32,7 +31,7 @@ CSS_ESTILOS = r"""
     
     .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: bold; }
     
-    .assinatura-container { margin-top: 40px; display: flex; justify-content: flex-end; }
+    .assinatura-container { margin-top: 50px; display: flex; justify-content: flex-end; }
     .assinatura-box { border-top: 1.5px solid #000; width: 350px; text-align: center; padding-top: 5px; font-size: 9pt; }
 
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; margin-top: 40px; }
@@ -99,9 +98,8 @@ with aba_gerar:
         nome_inst = c_nome.text_input("Nome da Escola", "Escola Municipal Cônego Francisco Pereira da Silva")
         valor_total = c_valor.text_input("Valor Total", "10,0")
         
-        # Alinhamento reduzido para os botões de anexo
-        st.write("**Logotipos (Opcional):**")
-        col_img_1, col_img_2, col_vazia = st.columns([1, 1, 2])
+        # Botões de anexo ocupando a linha de forma equilibrada
+        col_img_1, col_img_2 = st.columns(2)
         l_sme = col_img_1.file_uploader("Logo Esquerda", type=["png", "jpg"])
         l_esc = col_img_2.file_uploader("Logo Direita", type=["png", "jpg"])
         sme_b64, esc_b64 = get_image_base64(l_sme), get_image_base64(l_esc)
@@ -153,10 +151,10 @@ with aba_gerar:
             cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between;">{img_sme}<b>CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
             cartao_html += '<div class="instrucoes-cartao"><b>INSTRUÇÕES:</b> Use caneta preta ou azul. Preencha o círculo totalmente.</div>'
             
-            # Seção de identificação com margem inferior
             cartao_html += f'<div class="cartao-identificacao">'
             cartao_html += f'NOME COMPLETO:<br><div class="grid-container">{grid(30)}</div>'
-            cartao_html += f'NÚMERO: {grid(4)} &nbsp;&nbsp; TURMA: {grid(8)} &nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}'
+            # AJUSTE PARA 2 QUADRADINHOS NO NÚMERO
+            cartao_html += f'NÚMERO: {grid(2)} &nbsp;&nbsp; TURMA: {grid(8)} &nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}'
             cartao_html += '</div>'
             
             cartao_html += '<div class="columns-container">'
