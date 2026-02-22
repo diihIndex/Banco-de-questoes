@@ -14,7 +14,7 @@ df.columns = [c.lower().strip().replace('ú', 'u').replace('ê', 'e') for c in d
 
 # 3. Navegação Lateral
 st.sidebar.title("📌 Menu Principal")
-pagina = st.sidebar.radio("Navegar para:", ["🔍 Banco de Questões", "📝 Cadastrar Nova", "📄 Gerador de Prova/Atividade"])
+pagina = st.sidebar.radio("Navegar para:", ["🔍 Banco de Questões", "📝 Cadastrar Nova", "📄 Gerador de Prova"])
 
 # --- PÁGINA: GERADOR ---
 if pagina == "📄 Gerador de Prova":
