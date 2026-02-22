@@ -17,22 +17,23 @@ CSS_ESTILOS = r"""
     .grid-box { width: 26px; height: 32px; border: 1.5px solid black; margin-right: -1.5px; display: inline-block; }
     
     /* CARTÃO RESPOSTA */
-    .cartao-page { page-break-before: always; border: 2px solid black; padding: 20px; margin-top: 20px; }
-    .instrucoes-cartao { border: 1px solid black; padding: 8px; margin-bottom: 15px; font-size: 8pt; background-color: #f9f9f9; }
+    .cartao-page { page-break-before: always; border: 2px solid black; padding: 30px; margin-top: 20px; }
+    .instrucoes-cartao { border: 1.5px solid black; padding: 12px; margin-bottom: 25px; font-size: 8.5pt; background-color: #fcfcfc; line-height: 1.3; }
+    .instrucoes-cartao b { color: #000; }
     
     .cartao-identificacao { margin-bottom: 45px; } 
     
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 30px; justify-content: flex-start; }
-    .column { display: flex; flex-direction: column; border: 1px solid #000; min-width: 220px; }
-    .cartao-header-row { background-color: #eee; display: flex; font-size: 7pt; font-weight: bold; border-bottom: 1px solid #000; }
-    .cartao-row { display: flex; align-items: center; height: 32px; border-bottom: 0.5px solid #ccc; }
-    .q-num-col { width: 50px; font-weight: bold; text-align: center; border-right: 2px solid black; height: 100%; display: flex; align-items: center; justify-content: center; }
-    .bubbles-col { display: flex; gap: 6px; padding: 0 10px; align-items: center; }
+    .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 230px; }
+    .cartao-header-row { background-color: #eee; display: flex; font-size: 7.5pt; font-weight: bold; border-bottom: 1.5px solid #000; }
+    .cartao-row { display: flex; align-items: center; height: 35px; border-bottom: 0.5px solid #ccc; }
+    .q-num-col { width: 55px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11pt; }
+    .bubbles-col { display: flex; gap: 8px; padding: 0 12px; align-items: center; }
     
-    .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: bold; }
+    .bubble-circle { width: 24px; height: 24px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9pt; font-weight: bold; }
     
-    .assinatura-container { margin-top: 50px; display: flex; justify-content: flex-end; }
-    .assinatura-box { border-top: 1.5px solid #000; width: 350px; text-align: center; padding-top: 5px; font-size: 9pt; }
+    .assinatura-container { margin-top: 80px; display: flex; justify-content: flex-end; }
+    .assinatura-box { border-top: 1.5px solid #000; width: 400px; text-align: center; padding-top: 8px; font-size: 9pt; font-weight: bold; }
 
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; margin-top: 40px; }
     .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
@@ -98,7 +99,6 @@ with aba_gerar:
         nome_inst = c_nome.text_input("Nome da Escola", "Escola Municipal Cônego Francisco Pereira da Silva")
         valor_total = c_valor.text_input("Valor Total", "10,0")
         
-        # Botões de anexo ocupando a linha de forma equilibrada
         col_img_1, col_img_2 = st.columns(2)
         l_sme = col_img_1.file_uploader("Logo Esquerda", type=["png", "jpg"])
         l_esc = col_img_2.file_uploader("Logo Direita", type=["png", "jpg"])
@@ -148,24 +148,35 @@ with aba_gerar:
 
         if add_cartao and formato == "Objetiva":
             def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
-            cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between;">{img_sme}<b>CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
-            cartao_html += '<div class="instrucoes-cartao"><b>INSTRUÇÕES:</b> Use caneta preta ou azul. Preencha o círculo totalmente.</div>'
+            cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between; align-items:center;">{img_sme}<b style="font-size:14pt;">CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
+            
+            # Instruções melhoradas
+            cartao_html += """
+            <div class="instrucoes-cartao">
+                <b>INSTRUÇÕES PARA PREENCHIMENTO:</b><br>
+                1. Verifique se seus dados estão corretos no cabeçalho acima.<br>
+                2. Use apenas <b>caneta esferográfica de tinta azul ou preta</b>.<br>
+                3. Preencha <b>totalmente</b> o círculo da alternativa que julgar correta. Não deixe espaços em branco.<br>
+                4. Marque apenas <b>uma opção</b> por questão. Questões com mais de uma marcação ou rasuras serão anuladas.
+            </div>"""
             
             cartao_html += f'<div class="cartao-identificacao">'
-            cartao_html += f'NOME COMPLETO:<br><div class="grid-container">{grid(30)}</div>'
-            # AJUSTE PARA 2 QUADRADINHOS NO NÚMERO
-            cartao_html += f'NÚMERO: {grid(2)} &nbsp;&nbsp; TURMA: {grid(8)} &nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}'
+            cartao_html += f'NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(30)}</div>'
+            cartao_html += f'NÚMERO: {grid(2)} &nbsp;&nbsp;&nbsp;&nbsp; TURMA: {grid(8)} &nbsp;&nbsp;&nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}'
             cartao_html += '</div>'
             
             cartao_html += '<div class="columns-container">'
             num_q = len(df_prova)
             for c in range(0, num_q, 12):
-                cartao_html += '<div class="column"><div class="cartao-header-row"><div style="width:50px; text-align:center; border-right:1px solid #000;">QUEST.</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
+                cartao_html += '<div class="column"><div class="cartao-header-row"><div style="width:55px; text-align:center; border-right:1px solid #000;">QUESTÃO</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
                 for i in range(c, min(c + 12, num_q)):
                     bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
                     cartao_html += f'<div class="cartao-row"><div class="q-num-col">{i+1:02d}</div><div class="bubbles-col">{bubbles}</div></div>'
                 cartao_html += '</div>'
-            cartao_html += '</div><div class="assinatura-container"><div class="assinatura-box">ASSINATURA DO ESTUDANTE</div></div></div>'
+            cartao_html += '</div>'
+            
+            # Espaço de assinatura aumentado e alinhado à direita
+            cartao_html += '<div class="assinatura-container"><div class="assinatura-box">ASSINATURA DO ESTUDANTE</div></div></div>'
             html_corpo += cartao_html
 
         if add_gab:
@@ -174,6 +185,6 @@ with aba_gerar:
                 html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{row.get("gabarito"," ")}</b></div>'
             html_corpo += '</div></div>'
 
-        btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px 20px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ Imprimir Documento</button></div>'
+        btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px 20px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ Imprimir Prova Completa</button></div>'
         html_final = f"<!DOCTYPE html><html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn}{html_cabecalho}{html_corpo}</body></html>"
         st.components.v1.html(html_final, height=800, scrolling=True)
