@@ -4,7 +4,7 @@ import pandas as pd
 import base64
 
 # 1. Configuração da Página
-st.set_page_config(page_title="Gerador SME Fortaleza", layout="wide", page_icon="📝")
+st.set_page_config(page_title="Gerador SME", layout="wide", page_icon="📝")
 
 def get_image_base64(image_file):
     if image_file is not None:
@@ -23,7 +23,7 @@ except Exception as e:
     st.error(f"Erro ao conectar com a planilha: {e}")
     st.stop()
 
-# 3. Sidebar
+# 3. Sidebar: Logos
 st.sidebar.header("🖼️ Logotipos Oficiais")
 logo_sme_file = st.sidebar.file_uploader("Logo SME (Esquerda)", type=["png", "jpg", "jpeg"])
 logo_esc_file = st.sidebar.file_uploader("Logo Escola (Direita)", type=["png", "jpg", "jpeg"])
@@ -64,16 +64,13 @@ if opcao == MENU_GERADOR:
         ids = [int(s.split(" | ")[0]) for s in selecao]
         df_prova = df[df['id'].isin(ids)].copy()
 
-        # Definição de estilos e scripts sem f-string para evitar erro de chaves
-        html_head = r"""
-        <head>
-            <meta charset='UTF-8'>
-            <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
-            <style>
-                body { font-family: 'Arial', sans-serif; font-size: 10pt; color: black; margin: 0; }
-                .header-table { width: 100%; border: 2px solid black; border-collapse: collapse; margin-bottom: 20px; }
-                .header-table td { border: 1px solid black; padding: 10px; vertical-align: middle; }
-                .quest-box { margin-bottom: 25px; page-break-inside: avoid; }
-                .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; gap: 0px; }
-                .grid-box { width:
+        # Definição de Estilos e Scripts (Strings puras para evitar conflito com chaves do Python)
+        ESTILOS_CSS = r"""
+        <style>
+            body { font-family: 'Arial', sans-serif; font-size: 10pt; color: black; margin: 0; }
+            .header-table { width: 100%; border: 2px solid black; border-collapse: collapse; margin-bottom: 20px; }
+            .header-table td { border: 1px solid black; padding: 10px; vertical-align: middle; }
+            .quest-box { margin-bottom: 25px; page-break-inside: avoid; }
+            .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+            .grid-box { width: 24px; height: 32px; border: 1.5px solid black; margin-right: -1.5px; margin-bottom: 5px; display: inline-block; }
+            .cartao-page { page-break-before:
