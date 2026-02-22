@@ -129,4 +129,60 @@ elif opcao == MENU_GERADOR:
         cabecalho = f"""
         <div class="header">
             {nota_html}
-            <h2 style="margin:0;">{tipo_doc.upper()} DE {", ".join(sel_disc).upper() if sel_disc else "CONTEÚDO
+            <h2 style="margin:0;">{tipo_doc.upper()} DE {", ".join(sel_disc).upper() if sel_disc else "CONTEÚDO"}</h2>
+            <p style="margin:5px; font-weight: bold;">{nome_escola.upper()}</p>
+            <div style="text-align: left; margin-top: 15px;">
+                ALUNO(A): _________________________________________________ TURMA: ________ DATA: ___/___/___
+            </div>
+        </div>
+        """
+        
+        corpo = ""
+        for i, row in df_prova.reset_index().iterrows():
+            t_base = f"<i>{row['texto_base']}</i> " if pd.notna(row['texto_base']) and str(row['texto_base']).strip() != "" else ""
+            corpo += f"""
+            <div class="quest-box">
+                <b>QUESTÃO {i+1}</b> ({row['fonte']})<br>
+                {t_base}{row['comando']}
+            """
+            
+            if formato == "Objetiva":
+                alts = str(row['alternativas']).split(';')
+                letras = ['A', 'B', 'C', 'D', 'E']
+                corpo += "<ul>"
+                for idx, alt in enumerate(alts):
+                    if idx < 5:
+                        corpo += f"<li>{letras[idx]}) {alt.strip()}</li>"
+                corpo += "</ul>"
+            else:
+                corpo += "<div style='border: 1px dashed #ccc; height: 160px; margin-top: 10px;'></div>"
+            
+            corpo += "</div>"
+
+        # Adição do Cartão-Resposta
+        if add_cartao and formato == "Objetiva":
+            corpo += f"<div class='cartao-container'><h3 style='text-align:center;'>CARTÃO-RESPOSTA: {nome_escola.upper()}</h3>"
+            for i in range(len(df_prova)):
+                circles = "".join([f"<span class='circle'>{l}</span> " for l in ['A', 'B', 'C', 'D', 'E']])
+                corpo += f"<div style='margin-bottom:8px;'><b>{str(i+1).zfill(2)}</b> &nbsp;&nbsp; {circles}</div>"
+            corpo += "</div>"
+
+        # Adição do Gabarito do Professor
+        if add_gab_prof:
+            corpo += "<div style='page-break-before: always;'><h3>GABARITO DO PROFESSOR</h3>"
+            for i, row in df_prova.reset_index().iterrows():
+                corpo += f"Questão {i+1}: {row.get('gabarito', 'N/A')}<br>"
+            corpo += "</div>"
+
+        html_final = f"<!DOCTYPE html><html>{html_head}<body>{cabecalho}{corpo}</body></html>"
+        
+        # O BOTÃO DE DOWNLOAD COM A SINTAXE CORRIGIDA:
+        st.download_button(
+            label="📥 Baixar Documento",
+            data=html_final,
+            file_name="prova_gerada.html",
+            mime="text/html"
+        )
+        
+        st.subheader("👁️ Pré-visualização")
+        st.components.v1.html(html_final, height=800, scrolling=True)
