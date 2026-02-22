@@ -193,7 +193,7 @@ with aba_gerar:
                 <p>● Preencha <b>totalmente</b> o círculo correspondente à alternativa correta.</p>
                 <p>● Marque apenas <b>uma alternativa</b> por questão; rasuras invalidam a resposta.</p>
                 <p>● Não utilize corretivos e evite dobrar este cartão.</p></div>"""
-            cartao_html += f'<div class="cartao-identificacao">NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(36)}</div>NÚMERO: {grid(2)} &nbsp;&nbsp;&nbsp;&nbsp; TURMA: {grid(6)} &nbsp;&nbsp;&nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}</div>'
+            cartao_html += f'<div class="cartao-identificacao">NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(48)}</div>NÚMERO: {grid(2)} &nbsp;&nbsp;&nbsp;&nbsp; TURMA: {grid(6)} &nbsp;&nbsp;&nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}</div>'
             cartao_html += '<div class="columns-container">'
             num_q = len(df_prova)
             for c in range(0, num_q, 12):
