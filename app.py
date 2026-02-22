@@ -84,12 +84,12 @@ with aba_cadastrar:
         ano_cad = c4.text_input("Ano (ex: 2024)")
         
         fonte_cad = st.text_input("Fonte")
-        texto_base_cad = st.text_area("Texto Base (Suporta LaTeX como $x^2$)")
+        texto_base_cad = st.text_area("Texto Base (Ex: Suporta LaTeX como $x^2$)")
         comando_cad = st.text_area("Comando da Questão")
         alts_cad = st.text_input("Alternativas (A;B;C;D;E)")
         gab_cad = st.text_input("Gabarito")
         if st.form_submit_button("Salvar Questão"):
-            st.success("Dados prontos para envio!")
+            st.success("Questão pronta para salvar!")
 
 with aba_gerar:
     with st.expander("🏫 1. Configurações e Logotipos", expanded=True):
@@ -154,7 +154,7 @@ with aba_gerar:
             ano_inf = f" - {row['ano']}" if 'ano' in row and pd.notna(row['ano']) else ""
             t_base = f"<i>{row['texto_base']}</i><br>" if pd.notna(row['texto_base']) and str(row['texto_base']).strip() != "" else ""
             
-            # Texto base e comando no mesmo container
+            # Unindo texto base e comando
             html_corpo += f"""
             <div class="quest-box">
                 <b>QUESTÃO {i+1}</b> ({row["fonte"]}{ano_inf})
@@ -177,7 +177,7 @@ with aba_gerar:
             def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
             cartao_html = f'<div class="cartao-page">'
             cartao_html += f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">{img_sme}<b>CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
-            cartao_html += '<div class="instrucoes-cartao"><b>INSTRUÇÕES:</b> Use caneta azul ou preta. Preencha totalmente o círculo.</div>'
+            cartao_html += '<div class="instrucoes-cartao"><b>INSTRUÇÕES:</b> Use caneta azul ou preta. Preencha totalmente o círculo da alternativa correta. Marque apenas uma opção por questão.</div>'
             cartao_html += f'NOME COMPLETO:<br><div class="grid-container">{grid(30)}</div>'
             cartao_html += f'<div style="display: flex; gap: 30px;"><div>Nº:<br><div class="grid-container">{grid(4)}</div></div><div>TURMA:<br><div class="grid-container">{grid(8)}</div></div><div>DATA:<br><div class="grid-container">{grid(2)}/{grid(2)}/{grid(2)}</div></div></div>'
             
@@ -194,18 +194,20 @@ with aba_gerar:
             cartao_html += '</div>'
             html_corpo += cartao_html
 
-        # GABARITO (TABELADO COM BARRA |)
+        # Gabarito com Cabeçalho Explicativo
         if add_gab:
             html_corpo += '<div class="gabarito-section"><h3>GABARITO DO PROFESSOR</h3>'
             html_corpo += '<table class="gabarito-table">'
-            html_corpo += '<tr class="gabarito-header-row"><td>QUESTÃO (ESQ.)</td><td>RESPOSTA (DIR.)</td></tr>'
+            html_corpo += '<tr class="gabarito-header-row"><td>QUESTÃO (ESQUERDA)</td><td>RESPOSTA (DIREITA)</td></tr>'
             for i, row in df_prova.reset_index().iterrows():
                 g = row.get('gabarito', 'N/A')
                 html_corpo += f'<tr><td>Q{i+1:02d}</td><td>{g}</td></tr>'
             html_corpo += '</table></div>'
 
         btn_imp = '<div class="no-print" style="text-align:center; margin: 20px;"><button onclick="window.print()" style="padding:10px 20px; font-size:16px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer;">🖨️ Imprimir / Salvar PDF</button></div>'
-        html_final = f"<!DOCTYPE html><html>{MATH__AND_PRINT}{CSS_ESTILOS}<body>{btn_imp}{html_cabecalho}{html_corpo}</body></html>"
+        
+        # Variável MATHJAX_AND_PRINT corrigida aqui na f-string
+        html_final = f"<!DOCTYPE html><html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn_imp}{html_cabecalho}{html_corpo}</body></html>"
         
         st.divider()
         st.download_button("📥 Baixar Avaliação", html_final, "avaliacao.html", "text/html")
