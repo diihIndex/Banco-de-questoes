@@ -154,10 +154,9 @@ with aba_gerar:
             cartao_html += """
             <div class="instrucoes-cartao">
                 <b>INSTRUÇÕES PARA PREENCHIMENTO:</b><br>
-                1. Verifique se seus dados estão corretos no cabeçalho acima.<br>
-                2. Use apenas <b>caneta esferográfica de tinta azul ou preta</b>.<br>
-                3. Preencha <b>totalmente</b> o círculo da alternativa que julgar correta. Não deixe espaços em branco.<br>
-                4. Marque apenas <b>uma opção</b> por questão. Questões com mais de uma marcação ou rasuras serão anuladas.
+                1. Use apenas <b>caneta esferográfica de tinta azul ou preta</b>.<br>
+                2. Preencha <b>totalmente</b> o círculo da alternativa que julgar correta. Não deixe espaços em branco.<br>
+                3. Marque apenas <b>uma opção</b> por questão. Questões com mais de uma marcação ou rasuras serão anuladas.
             </div>"""
             
             cartao_html += f'<div class="cartao-identificacao">'
