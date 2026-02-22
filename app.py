@@ -11,18 +11,18 @@ CSS_ESTILOS = r"""
     .header-table td { border: 1px solid black; padding: 10px; vertical-align: middle; }
     .quest-box { margin-bottom: 25px; page-break-inside: avoid; }
     
-    /* Quadrados de Identificação */
+    /* Quadrados de Identificação Grandes */
     .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; flex-wrap: wrap; }
     .grid-box { width: 26px; height: 32px; border: 1.5px solid black; margin-right: -1.5px; display: inline-block; }
     
     /* Layout do Cartão em Colunas */
-    .cartao-page { page-break-before: always; border: 2px solid black; padding: 20px; }
-    .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 30px; justify-content: flex-start; margin-top: 20px; }
-    .column { display: flex; flex-direction: column; gap: 8px; }
+    .cartao-page { page-break-before: always; border: 2px solid black; padding: 20px; margin-top: 20px; }
+    .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 40px; justify-content: flex-start; margin-top: 20px; }
+    .column { display: flex; flex-direction: column; gap: 10px; }
     
-    /* Bolinhas com Letras dentro (Estilo Compacto) */
+    /* Bolinhas com Letras dentro (Otimização de Espaço) */
     .cartao-row { display: flex; align-items: center; gap: 8px; height: 30px; }
-    .q-num { width: 25px; font-weight: bold; font-size: 11pt; text-align: right; }
+    .q-num { width: 25px; font-weight: bold; font-size: 11pt; text-align: right; margin-right: 5px; }
     .bubble-circle { 
         width: 24px; height: 24px; 
         border: 1.5px solid black; 
@@ -56,40 +56,16 @@ def get_image_base64(image_file):
         except: return None
     return None
 
-# --- 2. CONFIGURAÇÃO E DADOS ---
+# --- 2. CONFIGURAÇÃO E CONEXÃO ---
 st.set_page_config(page_title="Gerador SME Fortaleza", layout="wide")
 
-st.sidebar.header("🖼️ Logotipos")
-l_sme = st.sidebar.file_uploader("Logo SME (Esquerda)", type=["png", "jpg"])
-l_esc = st.sidebar.file_uploader("Logo Escola (Direita)", type=["png", "jpg"])
+st.sidebar.header("🖼️ Logotipos Oficiais")
+l_sme = st.sidebar.file_uploader("Logo SME (Esquerda)", type=["png", "jpg", "jpeg"])
+l_esc = st.sidebar.file_uploader("Logo Escola (Direita)", type=["png", "jpg", "jpeg"])
 sme_b64 = get_image_base64(l_sme)
 esc_b64 = get_image_base64(l_esc)
 
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(ttl=0).copy()
-    df.columns = [str(c).lower().strip().replace('ú', 'u').replace('ê', 'e').replace('ã', 'a').replace('ç', 'c').replace('í', 'i').replace('é', 'e') for c in df.columns]
-except Exception as e:
-    st.error(f"Erro ao conectar: {e}")
-    st.stop()
-
-# --- 3. INTERFACE ---
-st.header("📄 Gerador de Avaliações Profissionais")
-
-with st.expander("🏫 Dados do Documento", expanded=True):
-    c1, c2 = st.columns([3, 1])
-    nome_inst = c1.text_input("Nome da Escola", "Escola Municipal Cônego Francisco Pereira da Silva")
-    valor_total = c2.text_input("Valor", "10,0")
-    
-    f1, f2 = st.columns(2)
-    disciplinas = sorted(df['disciplina'].unique()) if 'disciplina' in df.columns else []
-    sel_disc = f1.multiselect("Disciplina(s)", disciplinas)
-    tipo_doc = f1.selectbox("Tipo de Material", ["Prova", "Simulado", "Atividade"])
-    df_filter = df[df['disciplina'].isin(sel_disc)] if sel_disc else df
-    temas = sorted(df_filter['conteudo'].unique()) if 'conteudo' in df_filter.columns else []
-    sel_tema = f2.multiselect("Conteúdo/Tema", temas)
-    formato = f2.radio("Formato", ["Objetiva", "Subjetiva"], horizontal=True)
-    
-    check1, check2 = st.columns(2)
-    add_cartao = check1.checkbox("Incluir Cartão-Resposta Compacto", value=True)
-    add_gab = check2.checkbox("Incluir Gabarito (Professor
+    df.columns = [str(c).lower().strip().replace('ú', 'u').replace('ê', 'e').replace('ã', 'a').replace('
