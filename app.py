@@ -13,25 +13,22 @@ CSS_ESTILOS = r"""
     .quest-box { margin-bottom: 25px; page-break-inside: avoid; line-height: 1.4; }
     .texto-comando-container { margin-top: 5px; white-space: pre-wrap; }
     
+    /* ESTILO PARA IMAGENS DA QUESTÃO */
+    .quest-img { display: block; margin: 15px auto; max-width: 80%; max-height: 300px; border: 1px solid #eee; }
+    
     .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; flex-wrap: wrap; }
     .grid-box { width: 26px; height: 32px; border: 1.5px solid black; margin-right: -1.5px; display: inline-block; }
     
-    /* CARTÃO RESPOSTA */
     .cartao-page { page-break-before: always; border: 2px solid black; padding: 30px; margin-top: 20px; }
     .instrucoes-cartao { border: 1.5px solid black; padding: 12px; margin-bottom: 25px; font-size: 8.5pt; background-color: #fcfcfc; line-height: 1.3; }
-    .instrucoes-cartao b { color: #000; }
-    
     .cartao-identificacao { margin-bottom: 45px; } 
-    
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 30px; justify-content: flex-start; }
     .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 230px; }
     .cartao-header-row { background-color: #eee; display: flex; font-size: 7.5pt; font-weight: bold; border-bottom: 1.5px solid #000; }
     .cartao-row { display: flex; align-items: center; height: 35px; border-bottom: 0.5px solid #ccc; }
     .q-num-col { width: 55px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11pt; }
     .bubbles-col { display: flex; gap: 8px; padding: 0 12px; align-items: center; }
-    
     .bubble-circle { width: 24px; height: 24px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9pt; font-weight: bold; }
-    
     .assinatura-container { margin-top: 80px; display: flex; justify-content: flex-end; }
     .assinatura-box { border-top: 1.5px solid #000; width: 400px; text-align: center; padding-top: 8px; font-size: 9pt; font-weight: bold; }
 
@@ -88,17 +85,18 @@ with aba_cadastrar:
         ano_cad = c4.text_input("Ano")
         fonte_cad = st.text_input("Fonte")
         texto_base_cad = st.text_area("Texto Base")
+        # Campo de imagem no cadastro
+        url_img_cad = st.text_input("URL da Imagem (Opcional)")
         comando_cad = st.text_area("Comando")
         alts_cad = st.text_input("Alternativas (A;B;C;D;E)")
         gab_cad = st.text_input("Gabarito")
-        if st.form_submit_button("Salvar"): st.success("Salvo com sucesso!")
+        if st.form_submit_button("Salvar"): st.success("Questão pronta para o banco!")
 
 with aba_gerar:
     with st.expander("🏫 Configurações da Instituição", expanded=True):
         c_nome, c_valor = st.columns([3, 1])
         nome_inst = c_nome.text_input("Nome da Escola", "Escola Municipal Cônego Francisco Pereira da Silva")
         valor_total = c_valor.text_input("Valor Total", "10,0")
-        
         col_img_1, col_img_2 = st.columns(2)
         l_sme = col_img_1.file_uploader("Logo Esquerda", type=["png", "jpg"])
         l_esc = col_img_2.file_uploader("Logo Direita", type=["png", "jpg"])
@@ -116,7 +114,7 @@ with aba_gerar:
         add_cartao, add_gab = st.checkbox("Incluir Cartão-Resposta", value=True), st.checkbox("Incluir Gabarito", value=True)
 
     df_filter['label'] = df_filter['id'].astype(str) + " | " + df_filter['comando'].astype(str).str[:70] + "..."
-    selecao = st.multiselect("Selecione as questões para o documento:", options=df_filter['label'].tolist())
+    selecao = st.multiselect("Selecione as questões:", options=df_filter['label'].tolist())
 
     if selecao:
         ids = [int(s.split(" | ")[0]) for s in selecao]
@@ -131,14 +129,29 @@ with aba_gerar:
             <td style="width:15%; text-align:center;">{img_esc}</td></tr>
             <tr><td colspan="2">ESTUDANTE: ____________________________________________________<br>
             NÚMERO: [____] TURMA: [________] DATA: ___/___/___</td>
-            <td class="nota-cell">NOTA: ______/{valor_total}</td></tr>
+            <td class="nota-cell">NOTA: {valor_total}</td></tr>
         </table>"""
 
         html_corpo = ""
         for i, row in df_prova.reset_index().iterrows():
             ano = f" - {row['ano']}" if pd.notna(row.get('ano')) else ""
             t_base = f"<i>{row['texto_base']}</i><br>" if pd.notna(row.get('texto_base')) and str(row.get('texto_base')).strip() != "" else ""
-            html_corpo += f'<div class="quest-box"><b>QUESTÃO {i+1}</b> ({row["fonte"]}{ano})<div class="texto-comando-container">{t_base}{row["comando"]}</div>'
+            
+            # Lógica para imagem da questão
+            img_tag = ""
+            if 'imagem' in row and pd.notna(row['imagem']) and str(row['imagem']).strip() != "":
+                img_tag = f'<img src="{row["imagem"]}" class="quest-img">'
+            
+            # HTML da questão com imagem entre texto base e comando
+            html_corpo += f"""
+            <div class="quest-box">
+                <b>QUESTÃO {i+1}</b> ({row["fonte"]}{ano})
+                <div class="texto-comando-container">
+                    {t_base}
+                    {img_tag}
+                    {row["comando"]}
+                </div>
+            """
             if formato == "Objetiva":
                 alts = str(row['alternativas']).split(';')
                 for idx, alt in enumerate(alts):
@@ -146,24 +159,12 @@ with aba_gerar:
             else: html_corpo += "<div style='border:1px dashed #ccc; height:120px;'></div>"
             html_corpo += "</div>"
 
+        # (Mantém Cartão Resposta e Gabarito iguais...)
         if add_cartao and formato == "Objetiva":
             def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
             cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between; align-items:center;">{img_sme}<b style="font-size:14pt;">CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
-            
-            # Instruções melhoradas
-            cartao_html += """
-            <div class="instrucoes-cartao">
-                <b>INSTRUÇÕES PARA PREENCHIMENTO:</b><br>
-                1. Use apenas <b>caneta esferográfica de tinta azul ou preta</b>.<br>
-                2. Preencha <b>totalmente</b> o círculo da alternativa que julgar correta. Não deixe espaços em branco.<br>
-                3. Marque apenas <b>uma opção</b> por questão. Questões com mais de uma marcação ou rasuras serão anuladas.
-            </div>"""
-            
-            cartao_html += f'<div class="cartao-identificacao">'
-            cartao_html += f'NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(30)}</div>'
-            cartao_html += f'NÚMERO: {grid(2)} &nbsp;&nbsp;&nbsp;&nbsp; TURMA: {grid(8)} &nbsp;&nbsp;&nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}'
-            cartao_html += '</div>'
-            
+            cartao_html += '<div class="instrucoes-cartao"><b>INSTRUÇÕES PARA PREENCHIMENTO:</b><br>1. Verifique seus dados. 2. Use caneta azul ou preta. 3. Preencha <b>totalmente</b> o círculo. 4. Evite rasuras.</div>'
+            cartao_html += f'<div class="cartao-identificacao">NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(30)}</div>NÚMERO: {grid(2)} &nbsp;&nbsp;&nbsp;&nbsp; TURMA: {grid(8)} &nbsp;&nbsp;&nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}</div>'
             cartao_html += '<div class="columns-container">'
             num_q = len(df_prova)
             for c in range(0, num_q, 12):
@@ -172,18 +173,15 @@ with aba_gerar:
                     bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
                     cartao_html += f'<div class="cartao-row"><div class="q-num-col">{i+1:02d}</div><div class="bubbles-col">{bubbles}</div></div>'
                 cartao_html += '</div>'
-            cartao_html += '</div>'
-            
-            # Espaço de assinatura aumentado e alinhado à direita
-            cartao_html += '<div class="assinatura-container"><div class="assinatura-box">ASSINATURA DO ESTUDANTE</div></div></div>'
+            cartao_html += '</div><div class="assinatura-container"><div class="assinatura-box">ASSINATURA DO ESTUDANTE</div></div></div>'
             html_corpo += cartao_html
 
         if add_gab:
-            html_corpo += '<div class="gabarito-section"><h3>GABARITO PARA CONFERÊNCIA</h3><div class="gabarito-grid">'
+            html_corpo += '<div class="gabarito-section"><h3>GABARITO</h3><div class="gabarito-grid">'
             for i, row in df_prova.reset_index().iterrows():
                 html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{row.get("gabarito"," ")}</b></div>'
             html_corpo += '</div></div>'
 
-        btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px 20px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ Imprimir Prova Completa</button></div>'
+        btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px 20px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ Imprimir Prova</button></div>'
         html_final = f"<!DOCTYPE html><html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn}{html_cabecalho}{html_corpo}</body></html>"
         st.components.v1.html(html_final, height=800, scrolling=True)
