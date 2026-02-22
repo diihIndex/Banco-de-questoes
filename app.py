@@ -15,7 +15,9 @@ CSS_ESTILOS = r"""
     .grid-box { width: 26px; height: 32px; border: 1.5px solid black; margin-right: -1.5px; display: inline-block; }
     
     .cartao-page { page-break-before: always; border: 2px solid black; padding: 20px; margin-top: 20px; }
-    .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 40px; justify-content: flex-start; margin-top: 20px; }
+    .instrucoes-cartao { border: 1px solid black; padding: 8px; margin-bottom: 15px; font-size: 8pt; background-color: #f9f9f9; }
+    
+    .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 40px; justify-content: flex-start; margin-top: 15px; }
     .column { display: flex; flex-direction: column; gap: 10px; }
     
     .cartao-row { display: flex; align-items: center; gap: 8px; height: 30px; }
@@ -34,14 +36,16 @@ CSS_ESTILOS = r"""
     .nota-cell { background: #eee; text-align: center; font-weight: bold; width: 100px; }
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; margin-top: 40px; }
     
-    /* Configuração para ocultar botões na impressão */
+    /* REMOÇÃO DOS PONTINHOS DAS ALTERNATIVAS */
+    ul { list-style-type: none; padding-left: 5px; margin-top: 8px; }
+    li { margin-bottom: 6px; }
+
     @media print {
         .no-print { display: none; }
     }
 </style>
 """
 
-# Script para abrir a caixa de impressão automaticamente
 PRINT_SCRIPT = "<script>function printPage(){ window.print(); }</script>"
 
 MATHJAX_CONFIG = r"""
@@ -86,8 +90,8 @@ with st.expander("🏫 1. Configurações e Logotipos", expanded=True):
     valor_total = c2.text_input("Valor da Prova", "10,0")
     
     col_img1, col_img2 = st.columns(2)
-    l_sme = col_img1.file_uploader("Logo Esquerda", type=["png", "jpg", "jpeg"])
-    l_esc = col_img2.file_uploader("Logo Direita", type=["png", "jpg", "jpeg"])
+    l_sme = col_img1.file_uploader("Logo Esquerda (SME)", type=["png", "jpg", "jpeg"])
+    l_esc = col_img2.file_uploader("Logo Direita (Escola)", type=["png", "jpg", "jpeg"])
     sme_b64 = get_image_base64(l_sme)
     esc_b64 = get_image_base64(l_esc)
 
@@ -117,7 +121,7 @@ if selecao:
     img_sme = f'<img src="data:image/png;base64,{sme_b64}" style="max-height: 65px;">' if sme_b64 else ""
     img_esc = f'<img src="data:image/png;base64,{esc_b64}" style="max-height: 65px;">' if esc_b64 else ""
 
-    # Cabeçalho
+    # Cabeçalho da Prova
     html_cabecalho = f"""
     <table class="header-table">
         <tr>
@@ -141,7 +145,6 @@ if selecao:
     """
 
     html_corpo = ""
-    # Renderização de Questões
     for i, row in df_prova.reset_index().iterrows():
         t_base = f"<i>{row['texto_base']}</i> " if pd.notna(row['texto_base']) and str(row['texto_base']).strip() != "" else ""
         html_corpo += f'<div class="quest-box"><b>QUESTÃO {i+1}</b> ({row["fonte"]})<br>{t_base}{row["comando"]}'
@@ -157,13 +160,23 @@ if selecao:
             html_corpo += "<div style='border: 1px dashed #ccc; height: 180px; margin-top: 10px;'></div>"
         html_corpo += "</div>"
 
-    # Cartão Resposta
+    # Cartão Resposta Otimizado
     if add_cartao and formato == "Objetiva":
         def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
         cartao_html = '<div class="cartao-page">'
-        cartao_html += f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">{img_sme}<div><b>CARTÃO-RESPOSTA OFICIAL</b></div>{img_esc}</div>'
+        cartao_html += f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">{img_sme}<div><b>CARTÃO-RESPOSTA OFICIAL</b></div>{img_esc}</div>'
+        
+        # Bloco de Instruções
+        cartao_html += """
+        <div class="instrucoes-cartao">
+            <b>INSTRUÇÕES:</b> Use caneta azul ou preta. Preencha totalmente o círculo da alternativa correta. 
+            Não rasure, não use corretivo e não dobre esta folha. Marque apenas uma opção por questão.
+        </div>
+        """
+        
         cartao_html += f'NOME:<br><div class="grid-container">{grid(30)}</div>'
         cartao_html += f'<div style="display: flex; gap: 30px;"><div>Nº:<br><div class="grid-container">{grid(4)}</div></div><div>TURMA:<br><div class="grid-container">{grid(8)}</div></div><div>DATA:<br><div class="grid-container">{grid(2)}/{grid(2)}/{grid(2)}</div></div></div>'
+        
         cartao_html += '<div class="columns-container">'
         num_q = len(df_prova)
         for c in range(0, num_q, 12):
@@ -175,7 +188,7 @@ if selecao:
         cartao_html += '</div></div>'
         html_corpo += cartao_html
 
-    # Gabarito
+    # Gabarito do Professor
     if add_gab:
         html_corpo += '<div class="gabarito-section"><h3>GABARITO DO PROFESSOR</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">'
         for i, row in df_prova.reset_index().iterrows():
@@ -183,14 +196,12 @@ if selecao:
             html_corpo += f'<div style="width:100px; border:1px solid #ccc; padding:5px;"><b>Q{i+1}:</b> {g}</div>'
         html_corpo += '</div></div>'
 
-    # Botão de Impressão (Aparece no HTML final mas não na folha impressa)
-    botao_imprimir = '<div class="no-print" style="text-align:center; margin: 20px;"><button onclick="window.print()" style="padding:10px 20px; font-size:16px; cursor:pointer;">🖨️ Imprimir ou Salvar como PDF</button></div>'
+    botao_imprimir = '<div class="no-print" style="text-align:center; margin: 20px;"><button onclick="window.print()" style="padding:10px 20px; font-size:16px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer;">🖨️ Imprimir / Salvar como PDF</button></div>'
 
     html_final = f"<!DOCTYPE html><html>{MATHJAX_CONFIG}{PRINT_SCRIPT}{CSS_ESTILOS}<body>{botao_imprimir}{html_cabecalho}{html_corpo}</body></html>"
     
     st.divider()
-    st.info("👆 Para gerar o PDF: Clique no botão azul de download abaixo, abra o arquivo baixado e use a opção 'Imprimir' do seu navegador escolhendo 'Salvar como PDF'.")
-    st.download_button("📥 Baixar Arquivo para Impressão/PDF", html_final, "avaliacao_sme.html", "text/html")
+    st.download_button("📥 Baixar Avaliação", html_final, "avaliacao_sme.html", "text/html")
     st.components.v1.html(html_final, height=800, scrolling=True)
 else:
     st.info("💡 Selecione as questões para gerar o material.")
