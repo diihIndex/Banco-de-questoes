@@ -20,20 +20,7 @@ CSS_ESTILOS = r"""
     .q-num { width: 25px; font-weight: bold; font-size: 11pt; text-align: right; margin-right: 5px; }
     .bubble-circle { width: 24px; height: 24px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9pt; font-weight: bold; }
     .nota-cell { background: #eee; text-align: center; font-weight: bold; width: 100px; }
-    
-    /* GABARITO ESTILIZADO */
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; margin-top: 40px; }
-    .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-    .gabarito-item { 
-        width: 110px; 
-        border: 1px solid black; 
-        padding: 5px; 
-        text-align: center; 
-        font-family: monospace; 
-        font-size: 11pt; 
-    }
-    .gabarito-header-text { font-size: 9pt; font-style: italic; margin-bottom: 5px; display: block; }
-    
     ul { list-style-type: none; padding-left: 5px; margin-top: 8px; }
     li { margin-bottom: 6px; }
     @media print { .no-print { display: none; } }
@@ -70,7 +57,7 @@ st.title("📄 Gerador de Avaliações")
 aba_gerar, aba_cadastrar = st.tabs(["📋 Gerar Avaliação", "📥 Cadastrar Questão"])
 
 with aba_cadastrar:
-    st.subheader("Adicionar Nova Questão ao Banco")
+    st.subheader("Adicionar Nova Questão")
     with st.form("form_cadastro", clear_on_submit=True):
         c1, c2, c3, c4 = st.columns(4)
         disc_cad = c1.selectbox("Disciplina", sorted(df['disciplina'].unique()) if 'disciplina' in df.columns else ["Português", "Matemática"])
@@ -149,6 +136,7 @@ with aba_gerar:
 
         html_corpo = ""
         for i, row in df_prova.reset_index().iterrows():
+            # Fonte + Ano
             ano_inf = f" - {row['ano']}" if 'ano' in row and pd.notna(row['ano']) else ""
             t_base = f'<div style="margin-bottom:10px; font-style: italic; white-space: pre-wrap;">{row["texto_base"]}</div>' if pd.notna(row['texto_base']) and str(row['texto_base']).strip() != "" else ""
             html_corpo += f'<div class="quest-box"><b>QUESTÃO {i+1}</b> ({row["fonte"]}{ano_inf})<br>{t_base}{row["comando"]}'
@@ -163,14 +151,18 @@ with aba_gerar:
                 html_corpo += "<div style='border: 1px dashed #ccc; height: 180px; margin-top: 10px;'></div>"
             html_corpo += "</div>"
 
-        # Cartão Resposta
+        # Cartão Resposta com os campos solicitados
         if add_cartao and formato == "Objetiva":
             def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
             cartao_html = f'<div class="cartao-page">'
             cartao_html += f'<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">{img_sme}<b>CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
             cartao_html += '<div class="instrucoes-cartao"><b>INSTRUÇÕES:</b> Use caneta azul ou preta. Preencha totalmente o círculo da alternativa correta. Marque apenas uma opção por questão.</div>'
+            
+            # Identificação Completa
             cartao_html += f'NOME COMPLETO:<br><div class="grid-container">{grid(30)}</div>'
             cartao_html += f'<div style="display: flex; gap: 30px;"><div>Nº:<br><div class="grid-container">{grid(4)}</div></div><div>TURMA:<br><div class="grid-container">{grid(8)}</div></div><div>DATA:<br><div class="grid-container">{grid(2)}/{grid(2)}/{grid(2)}</div></div></div>'
+            
+            # Questões
             cartao_html += '<div class="columns-container">'
             num_q = len(df_prova)
             for c in range(0, num_q, 12):
@@ -180,18 +172,17 @@ with aba_gerar:
                     cartao_html += f'<div class="cartao-row"><span class="q-num">{i+1:02d}</span> {bubbles}</div>'
                 cartao_html += '</div>'
             cartao_html += '</div>'
+            
+            # Assinatura
             cartao_html += '<div style="margin-top:40px; border-top: 1px solid black; width: 300px; text-align: center; font-size: 8pt;">ASSINATURA DO ESTUDANTE</div>'
             cartao_html += '</div>'
             html_corpo += cartao_html
 
-        # GABARITO DO PROFESSOR (ALTERADO)
         if add_gab:
-            html_corpo += '<div class="gabarito-section"><h3>GABARITO DO PROFESSOR</h3>'
-            html_corpo += '<span class="gabarito-header-text">Legenda: [Nº Questão | Resposta]</span>'
-            html_corpo += '<div class="gabarito-grid">'
+            html_corpo += '<div class="gabarito-section"><h3>GABARITO DO PROFESSOR</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">'
             for i, row in df_prova.reset_index().iterrows():
                 g = row.get('gabarito', 'N/A')
-                html_corpo += f'<div class="gabarito-item"><b>Q{i+1:02d} | {g}</b></div>'
+                html_corpo += f'<div style="width:100px; border:1px solid #ccc; padding:5px;"><b>Q{i+1}:</b> {g}</div>'
             html_corpo += '</div></div>'
 
         btn_imp = '<div class="no-print" style="text-align:center; margin: 20px;"><button onclick="window.print()" style="padding:10px 20px; font-size:16px; background-color:#4CAF50; color:white; border:none; border-radius:5px; cursor:pointer;">🖨️ Imprimir / Salvar PDF</button></div>'
