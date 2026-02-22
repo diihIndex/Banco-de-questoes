@@ -23,7 +23,7 @@ except Exception as e:
     st.error(f"Erro ao conectar com a planilha: {e}")
     st.stop()
 
-# 3. Sidebar
+# 3. Sidebar: Logos
 st.sidebar.header("🖼️ Logotipos Oficiais")
 logo_sme_file = st.sidebar.file_uploader("Logo SME (Esquerda)", type=["png", "jpg", "jpeg"])
 logo_esc_file = st.sidebar.file_uploader("Logo Escola (Direita)", type=["png", "jpg", "jpeg"])
@@ -36,12 +36,12 @@ opcao = st.sidebar.radio("Navegar para:", [MENU_GERADOR])
 if opcao == MENU_GERADOR:
     st.header("📄 Gerador de Avaliações Profissionais")
     
-    with st.expander("🏫 Dados do Cabeçalho", expanded=True):
+    with st.expander("🏫 Dados da Instituição", expanded=True):
         col1, col2 = st.columns([3, 1])
         nome_inst = col1.text_input("Nome da Escola", "Escola Municipal Cônego Francisco Pereira da Silva")
-        valor_prova = col2.text_input("Valor da Prova", "10,0")
+        valor_prova = col2.text_input("Valor total da prova", "10,0")
 
-    with st.expander("🎯 Filtros e Opções", expanded=True):
+    with st.expander("🎯 Filtros e Documento", expanded=True):
         f1, f2 = st.columns(2)
         with f1:
             disciplinas = sorted(df['disciplina'].unique()) if 'disciplina' in df.columns else []
@@ -53,7 +53,7 @@ if opcao == MENU_GERADOR:
             sel_tema = st.multiselect("Conteúdo", temas)
             formato = st.radio("Tipo de Questão", ["Objetiva", "Subjetiva"], horizontal=True)
         
-        add_cartao = st.checkbox("Incluir Cartão-Resposta Quadriculado")
+        add_cartao = st.checkbox("Incluir Cartão-Resposta Quadriculado (Grande)")
         add_gab = st.checkbox("Incluir Gabarito p/ Professor")
 
     df_f = df_filter[df_filter['conteudo'].isin(sel_tema)] if sel_tema else df_filter
@@ -64,7 +64,7 @@ if opcao == MENU_GERADOR:
         ids = [int(s.split(" | ")[0]) for s in selecao]
         df_prova = df[df['id'].isin(ids)].copy()
 
-        # HTML Head - Correção definitiva para LaTeX
+        # HTML Head - Correção definitiva para strings e MathJax
         html_head = r"""
         <head>
             <meta charset='UTF-8'>
@@ -77,4 +77,13 @@ if opcao == MENU_GERADOR:
             <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
             <style>
                 body { font-family: 'Arial', sans-serif; font-size: 10pt; color: black; margin: 0; }
-                .header-table { width: 100%; border:
+                .header-table { width: 100%; border: 2px solid black; border-collapse: collapse; margin-bottom: 20px; }
+                .header-table td { border: 1px solid black; padding: 10px; vertical-align: middle; }
+                .quest-box { margin-bottom: 25px; page-break-inside: avoid; }
+                .grid-container { display: flex; margin-top: 4px; margin-bottom: 10px; }
+                .grid-box { width: 22px; height: 26px; border: 1px solid black; margin-right: -1px; display: inline-block; }
+                .cartao-page { page-break-before: always; border: 2px solid black; padding: 25px; }
+                .cartao-row { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+                .bubble-group { display: flex; flex-direction: column; align-items: center; margin: 0 8px; }
+                .bubble-letter { font-size: 8pt; font-weight: bold; margin-bottom: 2px; }
+                .bubble-circle { width: 18px; height: 18px; border: 1.5px
