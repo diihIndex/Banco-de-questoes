@@ -47,7 +47,7 @@ elif opcao == MENU_GERADOR:
     st.header("📄 Gerador de Material Didático")
     
     # Verifica se as colunas essenciais existem antes de prosseguir
-    colunas_obrigatorias = ['id', 'fonte', 'enunciado']
+    colunas_obrigatorias = ['id', 'fonte', 'comando']
     missing = [c for c in colunas_obrigatorias if c not in df.columns]
     
     if missing:
@@ -71,8 +71,8 @@ elif opcao == MENU_GERADOR:
             df_f = df_f[df_f['disciplina'].isin(f_disciplina)]
 
         # CRIAÇÃO DA LABEL (com segurança para nulos)
-        df_f['enunciado_curto'] = df_f['enunciado'].fillna("").astype(str).str[:70]
-        df_f['label'] = df_f['id'].astype(str) + " | " + df_f['fonte'].fillna("IFCE") + " | " + df_f['enunciado_curto'] + "..."
+        df_f['comando_curto'] = df_f['comando'].fillna("").astype(str).str[:70]
+        df_f['label'] = df_f['id'].astype(str) + " | " + df_f['fonte'].fillna("IFCE") + " | " + df_f['comando_curto'] + "..."
         
         selecionadas = st.multiselect("Selecione as questões:", options=df_f['label'].tolist())
 
