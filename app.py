@@ -16,20 +16,22 @@ CSS_ESTILOS = r"""
     .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; flex-wrap: wrap; }
     .grid-box { width: 26px; height: 32px; border: 1.5px solid black; margin-right: -1.5px; display: inline-block; }
     
-    /* CARTÃO RESPOSTA COM DIVISÃO */
+    /* CARTÃO RESPOSTA AJUSTADO */
     .cartao-page { page-break-before: always; border: 2px solid black; padding: 20px; margin-top: 20px; }
     .instrucoes-cartao { border: 1px solid black; padding: 8px; margin-bottom: 15px; font-size: 8pt; background-color: #f9f9f9; }
     
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 30px; justify-content: flex-start; margin-top: 10px; }
-    .column { display: flex; flex-direction: column; border: 1px solid #000; }
+    .column { display: flex; flex-direction: column; border: 1px solid #000; min-width: 220px; }
     .cartao-header-row { background-color: #eee; display: flex; font-size: 7pt; font-weight: bold; border-bottom: 1px solid #000; }
     .cartao-row { display: flex; align-items: center; height: 32px; border-bottom: 0.5px solid #ccc; }
-    .q-num-col { width: 40px; font-weight: bold; text-align: center; border-right: 2px solid black; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .q-num-col { width: 50px; font-weight: bold; text-align: center; border-right: 2px solid black; height: 100%; display: flex; align-items: center; justify-content: center; }
     .bubbles-col { display: flex; gap: 6px; padding: 0 10px; align-items: center; }
     
     .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: bold; }
     
-    /* GABARITO (VOLTOU AO FORMATO ANTERIOR) */
+    .assinatura-container { margin-top: 40px; display: flex; justify-content: flex-end; }
+    .assinatura-box { border-top: 1.5px solid #000; width: 350px; text-align: center; padding-top: 5px; font-size: 9pt; }
+
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; margin-top: 40px; }
     .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
     .gabarito-item { width: 100px; border: 1px solid #ccc; padding: 5px; text-align: center; font-size: 10pt; }
@@ -86,7 +88,7 @@ with aba_cadastrar:
         comando_cad = st.text_area("Comando")
         alts_cad = st.text_input("Alternativas (A;B;C;D;E)")
         gab_cad = st.text_input("Gabarito")
-        if st.form_submit_button("Salvar"): st.success("Pronto!")
+        if st.form_submit_button("Salvar"): st.success("Salvo com sucesso!")
 
 with aba_gerar:
     with st.expander("🏫 Configurações", expanded=True):
@@ -98,9 +100,9 @@ with aba_gerar:
 
     with st.expander("🎯 Filtros", expanded=True):
         f1, f2, f3 = st.columns(3)
-        sel_disc = f1.multiselect("Disciplina", sorted(df['disciplina'].unique()))
+        sel_disc = f1.multiselect("Disciplina", sorted(df['disciplina'].unique()) if 'disciplina' in df.columns else [])
         df_f1 = df[df['disciplina'].isin(sel_disc)] if sel_disc else df
-        sel_tema = f2.multiselect("Conteúdo", sorted(df_f1['conteudo'].unique()))
+        sel_tema = f2.multiselect("Conteúdo", sorted(df_f1['conteudo'].unique()) if 'conteudo' in df_f1.columns else [])
         sel_dif = f3.multiselect("Dificuldade", ["Fácil", "Médio", "Difícil"])
         df_filter = df_f1[df_f1['conteudo'].isin(sel_tema)] if sel_tema else df_f1
         if sel_dif: df_filter = df_filter[df_filter['dificuldade'].isin(sel_dif)]
@@ -122,14 +124,14 @@ with aba_gerar:
             <td style="text-align:center;"><h3>{nome_inst.upper()}</h3><b>PROVA DE {", ".join(sel_disc).upper()}</b></td>
             <td style="width:15%; text-align:center;">{img_esc}</td></tr>
             <tr><td colspan="2">ESTUDANTE: ____________________________________________________<br>
-            Nº: [____] TURMA: [________] DATA: ___/___/___</td>
+            NÚMERO: [____] TURMA: [________] DATA: ___/___/___</td>
             <td class="nota-cell">NOTA: {valor_total}</td></tr>
         </table>"""
 
         html_corpo = ""
         for i, row in df_prova.reset_index().iterrows():
             ano = f" - {row['ano']}" if pd.notna(row.get('ano')) else ""
-            t_base = f"<i>{row['texto_base']}</i><br>" if pd.notna(row.get('texto_base')) else ""
+            t_base = f"<i>{row['texto_base']}</i><br>" if pd.notna(row.get('texto_base')) and str(row.get('texto_base')).strip() != "" else ""
             html_corpo += f'<div class="quest-box"><b>QUESTÃO {i+1}</b> ({row["fonte"]}{ano})<div class="texto-comando-container">{t_base}{row["comando"]}</div>'
             if formato == "Objetiva":
                 alts = str(row['alternativas']).split(';')
@@ -143,16 +145,17 @@ with aba_gerar:
             cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between;">{img_sme}<b>CARTÃO-RESPOSTA</b>{img_esc}</div>'
             cartao_html += '<div class="instrucoes-cartao"><b>INSTRUÇÕES:</b> Use caneta preta/azul. Preencha o círculo totalmente.</div>'
             cartao_html += f'NOME COMPLETO:<br><div class="grid-container">{grid(30)}</div>'
-            cartao_html += f'Nº: {grid(4)} TURMA: {grid(8)} DATA: {grid(2)}/{grid(2)}/{grid(2)}'
+            cartao_html += f'NÚMERO: {grid(4)} TURMA: {grid(8)} DATA: {grid(2)}/{grid(2)}/{grid(2)}'
             cartao_html += '<div class="columns-container">'
             num_q = len(df_prova)
-            for c in range(0, num_q, 10):
-                cartao_html += '<div class="column"><div class="cartao-header-row"><div style="width:40px; text-align:center; border-right:1px solid #000;">QUEST.</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
-                for i in range(c, min(c + 10, num_q)):
+            # LIMITE DE 12 QUESTÕES POR COLUNA
+            for c in range(0, num_q, 12):
+                cartao_html += '<div class="column"><div class="cartao-header-row"><div style="width:50px; text-align:center; border-right:1px solid #000;">QUEST.</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
+                for i in range(c, min(c + 12, num_q)):
                     bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
                     cartao_html += f'<div class="cartao-row"><div class="q-num-col">{i+1:02d}</div><div class="bubbles-col">{bubbles}</div></div>'
                 cartao_html += '</div>'
-            cartao_html += '</div><div style="margin-top:40px; border-top:1.5px solid #000; width:300px; text-align:center;">ASSINATURA</div></div>'
+            cartao_html += '</div><div class="assinatura-container"><div class="assinatura-box">ASSINATURA DO ESTUDANTE</div></div></div>'
             html_corpo += cartao_html
 
         if add_gab:
@@ -161,6 +164,6 @@ with aba_gerar:
                 html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{row.get("gabarito"," ")}</b></div>'
             html_corpo += '</div></div>'
 
-        btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px; background:#4CAF50; color:#fff; border:none; border-radius:5px;">🖨️ Imprimir</button></div>'
+        btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer;">🖨️ Imprimir / Gerar PDF</button></div>'
         html_final = f"<!DOCTYPE html><html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn}{html_cabecalho}{html_corpo}</body></html>"
         st.components.v1.html(html_final, height=800, scrolling=True)
