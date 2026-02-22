@@ -151,7 +151,9 @@ with aba_gerar:
             <tr><td colspan="2"style="padding: 25px 5px;"> ESTUDANTE: ____________________________________________________<br>
             <br>
             NÚMERO: [____] TURMA: [________] DATA: ___/___/___</td>
-            <td class="nota-cell">NOTA <br> ______/{valor_total}</td>
+            <td class="nota-cell">NOTA 
+            <br> 
+            ______/{valor_total}</td>
         </table>"""
 
         html_corpo = ""
