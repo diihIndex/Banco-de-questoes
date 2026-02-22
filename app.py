@@ -11,6 +11,7 @@ try:
     df_raw = conn.read(ttl=0)
     df = df_raw.copy()
     
+    # Normalização de colunas
     df.columns = [
         str(c).lower().strip()
         .replace('ú', 'u').replace('ê', 'e').replace('ã', 'a')
@@ -21,7 +22,7 @@ except Exception as e:
     st.error(f"Erro ao conectar com a planilha: {e}")
     st.stop()
 
-# 3. Menu Lateral
+# 3. Navegação Lateral
 MENU_BANCO = "🔍 Banco de Questões"
 MENU_CADASTRO = "📝 Cadastrar Nova"
 MENU_GERADOR = "📄 Gerador de Prova"
@@ -83,6 +84,7 @@ elif opcao == MENU_GERADOR:
         
         add_gabarito = st.checkbox("Incluir Folha de Respostas")
 
+    # Seleção de Itens
     df_f['label'] = df_f['id'].astype(str) + " | " + df_f['fonte'].astype(str) + " | " + df_f['comando'].astype(str).str[:70] + "..."
     selecionadas = st.multiselect("Selecione as questões:", options=df_f['label'].tolist())
 
@@ -90,16 +92,29 @@ elif opcao == MENU_GERADOR:
         ids = [int(s.split(" | ")[0]) for s in selecionadas]
         df_prova = df[df['id'].isin(ids)].copy()
 
-        # Cabeçalho HTML com MathJax para suporte a LaTeX
+        # HTML Head com configuração explícita do MathJax
         html_head = """
         <head>
             <meta charset='UTF-8'>
-            <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+            <script>
+            window.MathJax = {
+              tex: {
+                inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+                displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+                processEscapes: true
+              },
+              options: {
+                renderAtStart: true
+              }
+            };
+            </script>
+            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
             <style>
-                body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; }
-                .quest-box { margin-bottom: 20px; page-break-inside: avoid; }
-                .header { border: 2px solid black; padding: 10px; text-align: center; margin-bottom: 20px; }
+                body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.4; color: black; }
+                .quest-box { margin-bottom: 25px; page-break-inside: avoid; }
+                .header { border: 2px solid black; padding: 15px; text-align: center; margin-bottom: 25px; }
+                ul { list-style-type: none; padding-left: 20px; margin-top: 10px; }
+                li { margin-bottom: 5px; }
             </style>
         </head>
         """
@@ -108,7 +123,7 @@ elif opcao == MENU_GERADOR:
         <div class="header">
             <h2 style="margin:0;">{tipo_doc.upper()} DE {", ".join(sel_disc).upper() if sel_disc else "CONTEÚDO"}</h2>
             <p style="margin:5px;">INSTITUTO FEDERAL DO CEARÁ</p>
-            <div style="text-align: left; margin-top: 15px;">
+            <div style="text-align: left; margin-top: 20px;">
                 NOME: _________________________________________________ TURMA: ________ DATA: ___/___/___
             </div>
         </div>
@@ -116,7 +131,7 @@ elif opcao == MENU_GERADOR:
         
         corpo = ""
         for i, row in df_prova.reset_index().iterrows():
-            # Texto base e comando na mesma linha
+            # Texto base e comando sem quebra de linha (na mesma linha)
             t_base = f"<i>{row['texto_base']}</i> " if pd.notna(row['texto_base']) and str(row['texto_base']).strip() != "" else ""
             
             corpo += f"""
@@ -127,19 +142,19 @@ elif opcao == MENU_GERADOR:
             
             if formato == "Objetiva":
                 alts = str(row['alternativas']).split(';')
-                letras = ['A', 'B', 'C', 'D', 'E'] # Letras em Maiúsculo
-                corpo += "<ul style='list-style-type: none; padding-left: 20px; margin-top: 8px;'>"
+                letras = ['A', 'B', 'C', 'D', 'E']
+                corpo += "<ul>"
                 for idx, alt in enumerate(alts):
                     if idx < 5:
-                        corpo += f"<li style='margin-bottom:3px;'>{letras[idx]}) {alt.strip()}</li>"
+                        corpo += f"<li>{letras[idx]}) {alt.strip()}</li>"
                 corpo += "</ul>"
             else:
-                corpo += "<div style='border: 1px dashed #ccc; height: 150px; margin-top: 10px;'></div>"
+                corpo += "<div style='border: 1px dashed #ccc; height: 160px; margin-top: 15px;'></div>"
             
             corpo += "</div>"
 
         if add_gabarito:
-            corpo += "<div style='page-break-before: always; border-top: 1px solid black; padding-top: 10px;'>"
+            corpo += "<div style='page-break-before: always; border-top: 2px solid black; padding-top: 20px;'>"
             corpo += "<h3 style='text-align:center;'>FOLHA DE RESPOSTAS</h3>"
             for i in range(len(df_prova)):
                 corpo += f"<p><b>{i+1}:</b> ( A ) ( B ) ( C ) ( D ) ( E )</p>"
@@ -147,6 +162,6 @@ elif opcao == MENU_GERADOR:
 
         html_final = f"<!DOCTYPE html><html>{html_head}<body>{cabecalho}{corpo}</body></html>"
         
-        st.download_button("📥 Baixar Documento", data=html_final, file_name="material_ifce.html", mime="text/html")
+        st.download_button("📥 Baixar Material", data=html_final, file_name="material_ifce.html", mime="text/html")
         st.subheader("👁️ Pré-visualização")
         st.components.v1.html(html_final, height=800, scrolling=True)
