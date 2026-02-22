@@ -41,13 +41,15 @@ CSS_ESTILOS = r"""
     
     .quest-box { margin-bottom: 25px; page-break-inside: avoid; line-height: 1.4; }
     .texto-comando-container { margin-top: 5px; white-space: pre-wrap; }
-    .quest-img { display: block; margin: 15px auto; max-width: 80%; max-height: 350px; border: 1px solid #ddd; padding: 5px; }
+    .quest-img { display: block; margin: 10px auto; max-width: 75%; max-height: 300px; border: 1px solid #ddd; padding: 5px; }
     
     .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; flex-wrap: wrap; }
     .grid-box { width: 26px; height: 32px; border: 1.5px solid black; margin-right: -1.5px; display: inline-block; }
     
     .cartao-page { page-break-before: always; border: 2px solid black; padding: 30px; margin-top: 20px; }
-    .instrucoes-cartao { border: 1.5px solid black; padding: 12px; margin-bottom: 25px; font-size: 8.5pt; background-color: #fcfcfc; line-height: 1.3; }
+    .instrucoes-cartao { border: 1.5px solid black; padding: 15px; margin-bottom: 25px; font-size: 9pt; background-color: #fcfcfc; }
+    .instrucoes-cartao p { margin: 5px 0; line-height: 1.4; }
+    
     .cartao-identificacao { margin-bottom: 45px; } 
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 30px; justify-content: flex-start; }
     .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 230px; }
@@ -56,6 +58,7 @@ CSS_ESTILOS = r"""
     .q-num-col { width: 55px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11pt; }
     .bubbles-col { display: flex; gap: 8px; padding: 0 12px; align-items: center; }
     .bubble-circle { width: 24px; height: 24px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9pt; font-weight: bold; }
+    
     .assinatura-container { margin-top: 80px; display: flex; justify-content: flex-end; }
     .assinatura-box { border-top: 1.5px solid #000; width: 400px; text-align: center; padding-top: 8px; font-size: 9pt; font-weight: bold; }
 
@@ -105,7 +108,7 @@ with aba_cadastrar:
         comando_cad = st.text_area("Comando")
         alts_cad = st.text_input("Alternativas (A;B;C;D;E)")
         gab_cad = st.text_input("Gabarito")
-        if st.form_submit_button("Salvar"): st.info("Copie os dados para sua planilha!")
+        if st.form_submit_button("Salvar"): st.info("Dados prontos para sua planilha!")
 
 with aba_gerar:
     with st.expander("🏫 Configurações da Instituição", expanded=True):
@@ -150,21 +153,22 @@ with aba_gerar:
         html_corpo = ""
         for i, row in df_prova.reset_index().iterrows():
             ano = f" - {row['ano']}" if pd.notna(row.get('ano')) else ""
-            t_base = f"<i>{row['texto_base']}</i><br>" if pd.notna(row.get('texto_base')) and str(row.get('texto_base')).strip() != "" else ""
+            t_base = f"<i>{row['texto_base']}</i>" if pd.notna(row.get('texto_base')) and str(row.get('texto_base')).strip() != "" else ""
             
-            # IMAGEM DA QUESTÃO COM CONVERSOR AUTOMÁTICO
+            # Lógica de Imagem e Comando imediato
             img_tag = ""
             if 'imagem' in row and pd.notna(row['imagem']) and str(row['imagem']).strip() != "":
                 link_convertido = converter_link_drive(str(row['imagem']))
                 img_tag = f'<img src="{link_convertido}" class="quest-img">'
             
+            # Montagem da questão
             html_corpo += f"""
             <div class="quest-box">
                 <b>QUESTÃO {i+1}</b> ({row["fonte"]}{ano})
                 <div class="texto-comando-container">
                     {t_base}
                     {img_tag}
-                    {row["comando"]}
+                    <div style="margin-top: { '5px' if img_tag == '' else '0px' };">{row["comando"]}</div>
                 </div>
             """
             if formato == "Objetiva":
@@ -174,11 +178,20 @@ with aba_gerar:
             else: html_corpo += "<div style='border:1px dashed #ccc; height:120px;'></div>"
             html_corpo += "</div>"
 
-        # (Cartão-Resposta e Gabarito...)
         if add_cartao and formato == "Objetiva":
             def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
-            cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between; align-items:center;">{img_sme}<b style="font-size:14pt;">CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
-            cartao_html += '<div class="instrucoes-cartao"><b>INSTRUÇÕES PARA PREENCHIMENTO:</b><br>1. Verifique seus dados. 2. Use caneta azul ou preta. 3. Preencha <b>totalmente</b> o círculo. 4. Evite rasuras.</div>'
+            cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">{img_sme}<b style="font-size:14pt;">CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
+            
+            # Instruções melhoradas em lista vertical
+            cartao_html += """
+            <div class="instrucoes-cartao">
+                <b style="display:block; margin-bottom:10px;">NORMAS DE PREENCHIMENTO:</b>
+                <p>● Utilize exclusivamente <b>caneta esferográfica azul ou preta</b>.</p>
+                <p>● Preencha <b>totalmente</b> o círculo correspondente à alternativa correta.</p>
+                <p>● Marque apenas <b>uma alternativa</b> por questão; marcações duplas ou rasuradas serão invalidadas.</p>
+                <p>● Não utilize corretivos e evite dobrar ou amassar este cartão.</p>
+            </div>"""
+            
             cartao_html += f'<div class="cartao-identificacao">NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(30)}</div>NÚMERO: {grid(2)} &nbsp;&nbsp;&nbsp;&nbsp; TURMA: {grid(8)} &nbsp;&nbsp;&nbsp;&nbsp; DATA: {grid(2)}/{grid(2)}/{grid(2)}</div>'
             cartao_html += '<div class="columns-container">'
             num_q = len(df_prova)
@@ -197,6 +210,6 @@ with aba_gerar:
                 html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{row.get("gabarito"," ")}</b></div>'
             html_corpo += '</div></div>'
 
-        btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px 20px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ Imprimir Prova</button></div>'
+        btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px 20px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ Gerar Documento de Impressão</button></div>'
         html_final = f"<!DOCTYPE html><html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn}{html_cabecalho}{html_corpo}</body></html>"
         st.components.v1.html(html_final, height=800, scrolling=True)
