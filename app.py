@@ -43,20 +43,25 @@ CSS_ESTILOS = r"""
     .header-table td { border: 1px solid black; padding: 8px; vertical-align: middle; }
     .quest-box { margin-bottom: 20px; page-break-inside: avoid; line-height: 1.4; }
     .texto-base { font-style: italic; display: block; margin-bottom: 8px; }
-    .comando-questao { font-weight: normal; }
     .quest-img { display: block; margin: 10px auto; max-width: 70%; max-height: 280px; border: 1px solid #ddd; }
+    
+    /* Grid de Identificação */
     .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; flex-wrap: wrap; }
-    .grid-box { width: 26px; height: 32px; border: 1.5px solid black; margin-right: -1.5px; display: inline-block; }
+    .grid-box { width: 18px; height: 24px; border: 1px solid black; margin-right: -1px; display: inline-block; }
+    
+    /* Cartão Resposta */
     .cartao-page { page-break-before: always; border: 2px solid black; padding: 30px; margin-top: 20px; }
-    .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 20px; }
-    .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 200px; }
+    .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 25px; justify-content: flex-start; }
+    .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 220px; }
     .cartao-row { display: flex; align-items: center; height: 32px; border-bottom: 0.5px solid #ccc; }
-    .q-num-col { width: 45px; font-weight: bold; text-align: center; border-right: 2px solid black; }
-    .bubbles-col { display: flex; gap: 8px; padding-left: 10px; }
-    .bubble-circle { width: 20px; height: 20px; border: 1.5px solid black; border-radius: 50%; text-align: center; font-size: 8pt; line-height: 18px; }
+    .q-num-col { width: 50px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 32px; display: flex; align-items: center; justify-content: center; }
+    .bubbles-col { display: flex; gap: 8px; padding-left: 10px; align-items: center; }
+    .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; text-align: center; font-size: 8pt; line-height: 20px; font-weight: bold; }
+    
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; }
     .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; }
     .gabarito-item { width: 100px; border: 1px solid #ccc; padding: 5px; text-align: center; }
+    
     ul { list-style-type: none; padding-left: 0; }
     li { margin-bottom: 5px; }
     @media print { .no-print { display: none; } }
@@ -84,14 +89,11 @@ except Exception as e:
 st.title("📄 Gerador de Avaliações")
 aba_gerar, aba_cadastrar = st.tabs(["📋 Gerar Avaliação", "📥 Cadastrar Questão"])
 
-# --- ABA CADASTRAR (DUMMY) ---
 with aba_cadastrar:
     st.subheader("Cadastro de Questão")
     st.info("Para cadastrar, utilize a planilha diretamente no Google Drive por enquanto.")
-    if st.button("Abrir Planilha"):
-        st.write(f"Link: https://docs.google.com/spreadsheets/d/1ndLQTjM2RQZliaiDs8zFU7r0_8tG2VJmYDXRyZ0Pe88/edit")
+    st.markdown("[Acesse a Planilha Aqui](https://docs.google.com/spreadsheets/d/1ndLQTjM2RQZliaiDs8zFU7r0_8tG2VJmYDXRyZ0Pe88/edit)")
 
-# --- ABA GERAR ---
 with aba_gerar:
     with st.expander("🏫 Configurações da Instituição", expanded=True):
         c_tipo, c_nome, c_valor = st.columns([1.2, 3, 0.8])
@@ -117,7 +119,6 @@ with aba_gerar:
         add_cartao = c_check1.checkbox("Incluir Cartão-Resposta", value=True)
         add_gab = c_check2.checkbox("Incluir Gabarito", value=True)
 
-    # Seleção de Questões
     df_filter['label'] = df_filter['id'].astype(str) + " | " + df_filter['comando'].astype(str).str[:70] + "..."
     selecao = st.multiselect("Selecione as questões na ordem desejada:", options=df_filter['label'].tolist())
 
@@ -125,7 +126,6 @@ with aba_gerar:
         ids_selecionados = [int(s.split(" | ")[0]) for s in selecao]
         df_prova = df[df['id'].isin(ids_selecionados)].set_index('id').loc[ids_selecionados].reset_index()
 
-        # Seletor de Formato
         st.subheader("⚙️ Formato das Questões")
         formatos_escolhidos = []
         cols = st.columns(min(len(df_prova), 6))
@@ -135,7 +135,6 @@ with aba_gerar:
                 f = st.selectbox(f"Q{idx+1:02d}", ["Objetiva", "Subjetiva"], index=default_idx, key=f"f_{row['id']}")
                 formatos_escolhidos.append(f)
 
-        # Montagem do HTML
         img_sme = f'<img src="data:image/png;base64,{sme_b64}" style="max-height: 60px;">' if sme_b64 else ""
         img_esc = f'<img src="data:image/png;base64,{esc_b64}" style="max-height: 60px;">' if esc_b64 else ""
 
@@ -159,7 +158,7 @@ with aba_gerar:
             html_corpo += f"""
             <div class="quest-box">
                 <b>QUESTÃO {num}</b> ({row.get('fonte', 'Autor')})
-                <div class="container-enunciado">{t_base}{img_tag}<div class="comando-questao">{row['comando']}</div></div>"""
+                <div class="container-enunciado">{t_base}{img_tag}<div>{row['comando']}</div></div>"""
             
             if formatos_escolhidos[i] == "Objetiva":
                 alts = str(row['alternativas']).split(';')
@@ -171,27 +170,41 @@ with aba_gerar:
                 html_corpo += "<div style='border:1px dashed #ccc; height:80px; margin-top:10px;'></div>"
             html_corpo += "</div>"
 
-        # Cartão Resposta
         if add_cartao:
-            cartao_html = f'<div class="cartao-page"><center><h3>{tipo_doc} - CARTÃO-RESPOSTA</h3></center>'
-            cartao_html += '<div class="columns-container">'
-            for c in range(0, len(df_prova), 10):
-                cartao_html += '<div class="column"><div style="background:#eee; text-align:center; font-weight:bold; border-bottom:1px solid #000;">Q. | RESPOSTA</div>'
-                for i in range(c, min(c + 10, len(df_prova))):
-                    bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']]) if formatos_escolhidos[i] == "Objetiva" else "---"
+            def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
+            cartao_html = f"""
+            <div class="cartao-page">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    {img_sme}<b style="font-size:16pt;">{tipo_doc} - CARTÃO-RESPOSTA</b>{img_esc}
+                </div>
+                <div style="border: 1.5px solid black; padding: 10px; margin-bottom: 20px; font-size: 9pt; background-color: #f9f9f9;">
+                    <b>NORMAS:</b> Use caneta azul ou preta. Preencha totalmente o círculo. Apenas uma resposta por questão.
+                </div>
+                <div style="margin-bottom: 25px;">
+                    NOME DO ESTUDANTE:<br><div class="grid-container">{grid(48)}</div>
+                    <div style="display:flex; gap:20px;">
+                        <div>NÚMERO: <div class="grid-container">{grid(3)}</div></div>
+                        <div>TURMA: <div class="grid-container">{grid(8)}</div></div>
+                        <div>DATA: <div class="grid-container">{grid(2)}/{grid(2)}/{grid(2)}</div></div>
+                    </div>
+                </div>
+                <div class="columns-container">"""
+            
+            for c in range(0, len(df_prova), 12):
+                cartao_html += '<div class="column"><div style="background:#eee; display:flex; font-weight:bold; border-bottom:1.5px solid #000;"><div style="width:50px; text-align:center; border-right:1px solid #000;">Q.</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
+                for i in range(c, min(c + 12, len(df_prova))):
+                    bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']]) if formatos_escolhidos[i] == "Objetiva" else "<small>DISCURSIVA</small>"
                     cartao_html += f'<div class="cartao-row"><div class="q-num-col">{i+1:02d}</div><div class="bubbles-col">{bubbles}</div></div>'
                 cartao_html += '</div>'
-            cartao_html += '</div></div>'
+            cartao_html += '</div><div style="margin-top:50px; text-align:right;"><div style="display:inline-block; border-top:1px solid #000; width:300px; text-align:center;">ASSINATURA</div></div></div>'
             html_corpo += cartao_html
 
-        # Gabarito
         if add_gab:
-            html_corpo += '<div class="gabarito-section"><h3>GABARITO OFICIAL</h3><div class="gabarito-grid">'
+            html_corpo += '<div class="gabarito-section"><h3>GABARITO</h3><div class="gabarito-grid">'
             for i, row in df_prova.iterrows():
                 val = row.get("gabarito", "-") if formatos_escolhidos[i] == "Objetiva" else "SUBJ."
                 html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{val}</b></div>'
             html_corpo += '</div></div>'
 
-        # Renderização Final
         btn_print = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:15px 30px; background:#4CAF50; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">🖨️ Imprimir / Salvar PDF</button></div>'
         st.components.v1.html(f"<html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn_print}{html_cabecalho}{html_corpo}</body></html>", height=900, scrolling=True)
