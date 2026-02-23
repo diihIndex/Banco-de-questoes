@@ -204,7 +204,7 @@ with aba_gerar:
 
                 <div style="margin-bottom: 35px;">
                     NOME COMPLETO DO ESTUDANTE:<br>
-                    <div class="grid-container" style="margin-bottom:15px;">{grid(48)}</div>
+                    <div class="grid-container" style="margin-bottom:20px;">{grid(48)}</div>
                     <div style="display:flex; gap:25px;">
                         <div>NÚMERO: <div class="grid-container">{grid(3)}</div></div>
                         <div>TURMA: <div class="grid-container">{grid(8)}</div></div>
