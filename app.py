@@ -3,9 +3,9 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import base64
 import io
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+# from google.oauth2 import service_account
+# from googleapiclient.discovery import build
+# from googleapiclient.http import MediaIoBaseUpload
 
 # --- 1. CONFIGURAÇÕES FIXAS ---
 ID_PASTA_DRIVE = "1KcxW78zutTqkf4zPWPfsRNiG9JNCnZZM"
