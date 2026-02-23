@@ -36,22 +36,16 @@ CSS_ESTILOS = r"""
     body { font-family: 'Arial', sans-serif; font-size: 12pt; color: black; margin: 0; }
     .header-table { width: 100%; border: 2px solid black; border-collapse: collapse; margin-bottom: 15px; }
     .header-table td { border: 1px solid black; padding: 8px; vertical-align: middle; }
-    
     .quest-box { margin-bottom: 20px; page-break-inside: avoid; line-height: 1.3; }
-    
     .texto-base { font-style: italic; display: inline; }
     .comando-questao { display: inline; margin-left: 5px; }
     .container-enunciado { margin-top: 5px; }
-    
     .quest-img { display: block; margin: 10px auto; max-width: 70%; max-height: 280px; border: 1px solid #ddd; }
-    
     .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; flex-wrap: wrap; }
     .grid-box { width: 26px; height: 32px; border: 1.5px solid black; margin-right: -1.5px; display: inline-block; }
-    
     .cartao-page { page-break-before: always; border: 2px solid black; padding: 30px; margin-top: 20px; }
     .instrucoes-cartao { border: 1.5px solid black; padding: 15px; margin-bottom: 25px; font-size: 9pt; background-color: #fcfcfc; }
     .instrucoes-cartao p { margin: 3px 0; line-height: 1.2; }
-    
     .cartao-identificacao { margin-bottom: 40px; } 
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 25px; justify-content: flex-start; }
     .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 220px; }
@@ -60,14 +54,11 @@ CSS_ESTILOS = r"""
     .q-num-col { width: 50px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10pt; }
     .bubbles-col { display: flex; gap: 8px; padding: 0 10px; align-items: center; }
     .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: bold; }
-    
     .assinatura-container { margin-top: 70px; display: flex; justify-content: flex-end; }
     .assinatura-box { border-top: 1.5px solid #000; width: 380px; text-align: center; padding-top: 5px; font-size: 9pt; font-weight: bold; }
-
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; margin-top: 30px; }
     .gabarito-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
     .gabarito-item { width: 90px; border: 1px solid #ccc; padding: 4px; text-align: center; font-size: 9pt; }
-
     ul { list-style-type: none; padding-left: 0; margin-top: 5px; }
     li { margin-bottom: 4px; }
     @media print { .no-print { display: none; } }
@@ -122,7 +113,7 @@ with aba_gerar:
         l_esc = col_img_2.file_uploader("Logo Direita", type=["png", "jpg"])
         sme_b64, esc_b64 = get_image_base64(l_sme), get_image_base64(l_esc)
 
-    with st.expander("🎯 Filtros e Estilo", expanded=True):
+    with st.expander("🎯 Filtros Gerais", expanded=True):
         f1, f2, f3 = st.columns(3)
         sel_disc = f1.multiselect("Disciplina", sorted(df['disciplina'].unique()) if 'disciplina' in df.columns else [])
         df_f1 = df[df['disciplina'].isin(sel_disc)] if sel_disc else df
@@ -130,19 +121,27 @@ with aba_gerar:
         sel_dif = f3.multiselect("Dificuldade", ["Fácil", "Médio", "Difícil"])
         df_filter = df_f1[df_f1['conteudo'].isin(sel_tema)] if sel_tema else df_f1
         if sel_dif: df_filter = df_filter[df_filter['dificuldade'].isin(sel_dif)]
-        
-        # MUDANÇA: Novo modo "Misto (Automático)"
-        formato = st.radio("Estilo das Questões", ["Misto (Automático)", "Objetiva", "Subjetiva"], horizontal=True)
         add_cartao, add_gab = st.checkbox("Incluir Cartão-Resposta", value=True), st.checkbox("Incluir Gabarito", value=True)
 
     df_filter['label'] = df_filter['id'].astype(str) + " | " + df_filter['comando'].astype(str).str[:70] + "..."
-    selecao = st.multiselect("Selecione as questões:", options=df_filter['label'].tolist())
+    selecao = st.multiselect("Selecione as questões na ordem desejada:", options=df_filter['label'].tolist())
 
     if selecao:
         ids_selecionados = [int(s.split(" | ")[0]) for s in selecao]
         df_selecionado = df[df['id'].isin(ids_selecionados)].set_index('id')
         df_prova = df_selecionado.loc[ids_selecionados].reset_index()
-        
+
+        # --- NOVO: SELETOR DE FORMATO INDIVIDUAL ---
+        st.subheader("⚙️ Definir formato por questão")
+        formatos_escolhidos = []
+        col_ajuste = st.columns(min(len(df_prova), 5))
+        for idx, row in df_prova.iterrows():
+            with col_ajuste[idx % 5]:
+                # Sugere Objetiva se houver alternativas na planilha, senão Subjetiva
+                default_format = "Objetiva" if pd.notna(row.get('alternativas')) and str(row['alternativas']).strip() != "" else "Subjetiva"
+                f = st.selectbox(f"Q{idx+1:02d}", ["Objetiva", "Subjetiva"], index=0 if default_format == "Objetiva" else 1, key=f"fmt_{row['id']}")
+                formatos_escolhidos.append(f)
+
         img_sme = f'<img src="data:image/png;base64,{sme_b64}" style="max-height: 60px;">' if sme_b64 else ""
         img_esc = f'<img src="data:image/png;base64,{esc_b64}" style="max-height: 60px;">' if esc_b64 else ""
 
@@ -181,10 +180,8 @@ with aba_gerar:
                 </div>
             """
             
-            # LÓGICA DE FORMATO INDIVIDUAL
-            tem_alts = pd.notna(row.get('alternativas')) and str(row['alternativas']).strip() != ""
-            
-            if formato == "Objetiva" or (formato == "Misto (Automático)" and tem_alts):
+            # FORMATO CONFORME ESCOLHA NO SELETOR
+            if formatos_escolhidos[i] == "Objetiva":
                 alts = str(row['alternativas']).split(';')
                 html_corpo += "<ul>"
                 for idx, alt in enumerate(alts):
@@ -195,8 +192,8 @@ with aba_gerar:
             
             html_corpo += "</div>"
 
-        # CARTÃO RESPOSTA (Ajustado para o modo Misto)
-        if add_cartao and (formato != "Subjetiva"):
+        # CARTÃO RESPOSTA INTELIGENTE
+        if add_cartao:
             def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
             cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">{img_sme}<b style="font-size:14pt;">CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
             cartao_html += """<div class="instrucoes-cartao"><b>NORMAS DE PREENCHIMENTO:</b>
@@ -210,11 +207,7 @@ with aba_gerar:
             for c in range(0, len(df_prova), 12):
                 cartao_html += '<div class="column"><div class="cartao-header-row"><div style="width:50px; text-align:center; border-right:1px solid #000;">QUESTÃO</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
                 for i in range(c, min(c + 12, len(df_prova))):
-                    row_q = df_prova.iloc[i]
-                    tem_alts_q = pd.notna(row_q.get('alternativas')) and str(row_q['alternativas']).strip() != ""
-                    
-                    # No modo misto, se a questão for subjetiva, mostramos o número mas bloqueamos as bolinhas
-                    if formato == "Misto (Automático)" and not tem_alts_q:
+                    if formatos_escolhidos[i] == "Subjetiva":
                         bubbles = "<span style='font-size:8pt; color:#999;'>--- SUBJETIVA ---</span>"
                     else:
                         bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
@@ -227,10 +220,10 @@ with aba_gerar:
         if add_gab:
             html_corpo += '<div class="gabarito-section"><h3>GABARITO</h3><div class="gabarito-grid">'
             for i, row in df_prova.iterrows():
-                gab_val = row.get("gabarito"," ") if pd.notna(row.get("gabarito")) else "---"
+                gab_val = row.get("gabarito"," ") if pd.notna(row.get("gabarito")) and formatos_escolhidos[i] == "Objetiva" else "---"
                 html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{gab_val}</b></div>'
             html_corpo += '</div></div>'
 
         btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px 20px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ Gerar Documento de Impressão</button></div>'
-        html_final = f"<!DOCTYPE html><html>{MATH_AND_PRINT if 'MATH_AND_PRINT' in locals() else MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn}{html_cabecalho}{html_corpo}</body></html>"
+        html_final = f"<!DOCTYPE html><html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn}{html_cabecalho}{html_corpo}</body></html>"
         st.components.v1.html(html_final, height=800, scrolling=True)
