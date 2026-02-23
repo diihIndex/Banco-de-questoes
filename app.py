@@ -94,7 +94,7 @@ aba_gerar, aba_cadastrar = st.tabs(["📋 Gerar Avaliação", "📥 Cadastrar Qu
 
 with aba_cadastrar:
     st.subheader("Cadastro de Questão")
-    st.info("Para cadastrar, utilize a planilha diretamente no Google Drive por enquanto.")
+    st.info("Para cadastrar, utilize a planilha diretamente no Google Drive.")
     st.markdown("[Acesse a Planilha Aqui](https://docs.google.com/spreadsheets/d/1ndLQTjM2RQZliaiDs8zFU7r0_8tG2VJmYDXRyZ0Pe88/edit)")
 
 with aba_gerar:
@@ -177,8 +177,13 @@ with aba_gerar:
             def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
             cartao_html = f"""
             <div class="cartao-page">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    {img_sme}<b style="font-size:16pt;">{tipo_doc} <br> <br> CARTÃO-RESPOSTA OFICIAL</b>{img_esc}
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 20px;">
+                    {img_sme}
+                    <div style="text-align: center;">
+                        <h2 style="margin: 0; text-transform: uppercase;">{tipo_doc}</h2>
+                        <h3 style="margin: 0; letter-spacing: 2px;">CARTÃO-RESPOSTA OFICIAL</h3>
+                    </div>
+                    {img_esc}
                 </div>
                 
                 <div class="instrucoes-cartao">
