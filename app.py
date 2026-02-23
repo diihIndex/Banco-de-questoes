@@ -138,8 +138,12 @@ with aba_gerar:
     selecao = st.multiselect("Selecione as questões:", options=df_filter['label'].tolist())
 
     if selecao:
-        ids = [int(s.split(" | ")[0]) for s in selecao]
-        df_prova = df[df['id'].isin(ids)].copy()
+        ids_selecionados = [int(s.split(" | ")[0]) for s in selecao]
+        
+        # GARANTE A ORDEM DE SELEÇÃO: criamos uma lista baseada na ordem dos IDs selecionados
+        df_selecionado = df[df['id'].isin(ids_selecionados)].set_index('id')
+        df_prova = df_selecionado.loc[ids_selecionados].reset_index()
+        
         img_sme = f'<img src="data:image/png;base64,{sme_b64}" style="max-height: 60px;">' if sme_b64 else ""
         img_esc = f'<img src="data:image/png;base64,{esc_b64}" style="max-height: 60px;">' if esc_b64 else ""
 
@@ -155,7 +159,8 @@ with aba_gerar:
         </table>"""
 
         html_corpo = ""
-        for i, row in df_prova.reset_index().iterrows():
+        for i, row in df_prova.iterrows():
+            num_formatado = f"{i+1:02d}" # Formata 1 como 01, 2 como 02, etc.
             ano = f" - {row['ano']}" if pd.notna(row.get('ano')) else ""
             t_base_content = str(row.get('texto_base', '')).strip()
             t_base_html = f'<span class="texto-base">{t_base_content}</span>' if t_base_content else ""
@@ -169,7 +174,7 @@ with aba_gerar:
             
             html_corpo += f"""
             <div class="quest-box">
-                <b>QUESTÃO {i+1}</b> ({row["fonte"]}{ano})
+                <b>QUESTÃO {num_formatado}</b> ({row["fonte"]}{ano})
                 <div class="container-enunciado">
                     {t_base_html}
                     {img_tag if img_tag else ""}
@@ -207,7 +212,7 @@ with aba_gerar:
 
         if add_gab:
             html_corpo += '<div class="gabarito-section"><h3>GABARITO</h3><div class="gabarito-grid">'
-            for i, row in df_prova.reset_index().iterrows():
+            for i, row in df_prova.iterrows():
                 html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{row.get("gabarito"," ")}</b></div>'
             html_corpo += '</div></div>'
 
