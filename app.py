@@ -38,7 +38,7 @@ def limpar_coluna(nome):
 # --- 2. CONFIGURAÇÕES VISUAIS (CSS) ---
 CSS_ESTILOS = r"""
 <style>
-    body { font-family: 'Arial', sans-serif; font-size: 11pt; color: black; margin: 0; }
+    body { font-family: 'Arial', sans-serif; font-size: 12pt; color: black; margin: 0; }
     .header-table { width: 100%; border: 2px solid black; border-collapse: collapse; margin-bottom: 15px; }
     .header-table td { border: 1px solid black; padding: 8px; vertical-align: middle; }
     .quest-box { margin-bottom: 20px; page-break-inside: avoid; line-height: 1.4; }
