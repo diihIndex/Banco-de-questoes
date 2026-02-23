@@ -47,16 +47,19 @@ CSS_ESTILOS = r"""
     
     /* Grid de Identificação */
     .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; flex-wrap: wrap; }
-    .grid-box { width: 18px; height: 24px; border: 1px solid black; margin-right: -1px; display: inline-block; }
+    .grid-box { width: 18px; height: 24px; border: 1.2px solid black; margin-right: -1.2px; display: inline-block; }
     
     /* Cartão Resposta */
     .cartao-page { page-break-before: always; border: 2px solid black; padding: 30px; margin-top: 20px; }
+    .instrucoes-cartao { border: 1.5px solid black; padding: 15px; margin-bottom: 25px; font-size: 9pt; background-color: #fcfcfc; }
+    .instrucoes-cartao p { margin: 3px 0; line-height: 1.2; }
+    
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 25px; justify-content: flex-start; }
     .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 220px; }
     .cartao-row { display: flex; align-items: center; height: 32px; border-bottom: 0.5px solid #ccc; }
-    .q-num-col { width: 50px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 32px; display: flex; align-items: center; justify-content: center; }
-    .bubbles-col { display: flex; gap: 8px; padding-left: 10px; align-items: center; }
-    .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; text-align: center; font-size: 8pt; line-height: 20px; font-weight: bold; }
+    .q-num-col { width: 50px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10pt; }
+    .bubbles-col { display: flex; gap: 8px; padding: 0 10px; align-items: center; }
+    .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: bold; }
     
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; }
     .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -175,14 +178,21 @@ with aba_gerar:
             cartao_html = f"""
             <div class="cartao-page">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    {img_sme}<b style="font-size:16pt;">{tipo_doc} - CARTÃO-RESPOSTA</b>{img_esc}
+                    {img_sme}<b style="font-size:16pt;">{tipo_doc} - CARTÃO-RESPOSTA OFICIAL</b>{img_esc}
                 </div>
-                <div style="border: 1.5px solid black; padding: 10px; margin-bottom: 20px; font-size: 9pt; background-color: #f9f9f9;">
-                    <b>NORMAS:</b> Use caneta azul ou preta. Preencha totalmente o círculo. Apenas uma resposta por questão.
+                
+                <div class="instrucoes-cartao">
+                    <b>NORMAS DE PREENCHIMENTO:</b>
+                    <p>● Utilize exclusivamente <b>caneta esferográfica azul ou preta</b>.</p>
+                    <p>● Preencha <b>totalmente</b> o círculo correspondente à alternativa correta.</p>
+                    <p>● Marque apenas <b>uma alternativa</b> por questão; rasuras invalidam a resposta.</p>
+                    <p>● Não utilize corretivos e evite dobrar este cartão.</p>
                 </div>
-                <div style="margin-bottom: 25px;">
-                    NOME DO ESTUDANTE:<br><div class="grid-container">{grid(48)}</div>
-                    <div style="display:flex; gap:20px;">
+
+                <div style="margin-bottom: 35px;">
+                    NOME COMPLETO DO ESTUDANTE:<br>
+                    <div class="grid-container" style="margin-bottom:15px;">{grid(48)}</div>
+                    <div style="display:flex; gap:25px;">
                         <div>NÚMERO: <div class="grid-container">{grid(3)}</div></div>
                         <div>TURMA: <div class="grid-container">{grid(8)}</div></div>
                         <div>DATA: <div class="grid-container">{grid(2)}/{grid(2)}/{grid(2)}</div></div>
@@ -191,16 +201,28 @@ with aba_gerar:
                 <div class="columns-container">"""
             
             for c in range(0, len(df_prova), 12):
-                cartao_html += '<div class="column"><div style="background:#eee; display:flex; font-weight:bold; border-bottom:1.5px solid #000;"><div style="width:50px; text-align:center; border-right:1px solid #000;">Q.</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
+                cartao_html += '<div class="column"><div style="background:#eee; display:flex; font-weight:bold; border-bottom:1.5px solid #000; font-size: 7.5pt;"><div style="width:50px; text-align:center; border-right:1px solid #000;">QUESTÃO</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
                 for i in range(c, min(c + 12, len(df_prova))):
-                    bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']]) if formatos_escolhidos[i] == "Objetiva" else "<small>DISCURSIVA</small>"
+                    if formatos_escolhidos[i] == "Subjetiva":
+                        bubbles = "<span style='font-size:7pt; color:#999;'>--- SUBJETIVA ---</span>"
+                    else:
+                        bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
+                    
                     cartao_html += f'<div class="cartao-row"><div class="q-num-col">{i+1:02d}</div><div class="bubbles-col">{bubbles}</div></div>'
                 cartao_html += '</div>'
-            cartao_html += '</div><div style="margin-top:50px; text-align:right;"><div style="display:inline-block; border-top:1px solid #000; width:300px; text-align:center;">ASSINATURA</div></div></div>'
+            
+            cartao_html += """
+                </div>
+                <div style="margin-top: 70px; display: flex; justify-content: flex-end;">
+                    <div style="border-top: 1.5px solid #000; width: 380px; text-align: center; padding-top: 5px; font-size: 9pt; font-weight: bold;">
+                        ASSINATURA DO ESTUDANTE
+                    </div>
+                </div>
+            </div>"""
             html_corpo += cartao_html
 
         if add_gab:
-            html_corpo += '<div class="gabarito-section"><h3>GABARITO</h3><div class="gabarito-grid">'
+            html_corpo += '<div class="gabarito-section"><h3>GABARITO OFICIAL</h3><div class="gabarito-grid">'
             for i, row in df_prova.iterrows():
                 val = row.get("gabarito", "-") if formatos_escolhidos[i] == "Objetiva" else "SUBJ."
                 html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{val}</b></div>'
