@@ -2,8 +2,39 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import base64
+import io
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 
-# --- 1. FUNÇÕES AUXILIARES ---
+# --- 1. CONFIGURAÇÕES FIXAS ---
+ID_PASTA_DRIVE = "1KcxW78zutTqkf4zPWPfsRNiG9JNCnZZM"
+
+# --- 2. FUNÇÕES AUXILIARES ---
+
+def upload_para_drive(file):
+    """Faz o upload do arquivo para a pasta fixa do Google Drive."""
+    try:
+        # Puxa as credenciais que você colou no Secrets do Streamlit
+        creds_dict = st.secrets["gcp_service_account"]
+        creds = service_account.Credentials.from_service_account_info(creds_dict)
+        service = build('drive', 'v3', credentials=creds)
+
+        file_metadata = {'name': file.name, 'parents': [ID_PASTA_DRIVE]}
+        media = MediaIoBaseUpload(io.BytesIO(file.getvalue()), mimetype=file.type)
+        
+        # Cria o arquivo no Drive
+        drive_file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        file_id = drive_file.get('id')
+
+        # Permite que qualquer pessoa com o link visualize (necessário para a imagem aparecer na prova)
+        service.permissions().create(fileId=file_id, body={'type': 'anyone', 'role': 'viewer'}).execute()
+        
+        # Retorna o link direto (UC) que funciona como SRC de imagem
+        return f"https://drive.google.com/uc?id={file_id}"
+    except Exception as e:
+        st.error(f"Erro no Upload para o Drive: {e}")
+        return None
 
 def converter_link_drive(url):
     url = str(url).strip()
@@ -15,7 +46,10 @@ def converter_link_drive(url):
             elif 'id=' in url:
                 file_id = url.split('id=')[1].split('&')[0]
                 return f'https://lh3.googleusercontent.com/u/0/d/{file_id}'
-        except Exception: return url
+            elif 'uc?id=' in url:
+                file_id = url.split('id=')[1]
+                return f'https://lh3.googleusercontent.com/u/0/d/{file_id}'
+        except: return url
     return url
 
 def get_image_base64(image_file):
@@ -30,7 +64,7 @@ def limpar_coluna(nome):
     for k, v in subs.items(): n = n.replace(k, v)
     return n
 
-# --- 2. CONFIGURAÇÕES VISUAIS (CSS) ---
+# --- 3. CONFIGURAÇÕES VISUAIS (CSS) ---
 CSS_ESTILOS = r"""
 <style>
     body { font-family: 'Arial', sans-serif; font-size: 12pt; color: black; margin: 0; }
@@ -74,7 +108,7 @@ MATHJAX_AND_PRINT = r"""
 <script>function printPage(){ window.print(); }</script>
 """
 
-# --- 3. CONEXÃO E INTERFACE ---
+# --- 4. CONEXÃO E INTERFACE ---
 st.set_page_config(page_title="Gerador de Avaliações", layout="wide")
 
 try:
@@ -88,23 +122,61 @@ st.title("📄 Gerador de Avaliações")
 aba_gerar, aba_cadastrar = st.tabs(["📋 Gerar Avaliação", "📥 Cadastrar Questão"])
 
 with aba_cadastrar:
-    st.subheader("Cadastro de Questão")
-    with st.form("form_cad"):
+    st.subheader("📥 Cadastro de Nova Questão")
+    with st.form("form_cad", clear_on_submit=True):
         c1, c2, c3, c4 = st.columns(4)
         disc_cad = c1.selectbox("Disciplina", sorted(df['disciplina'].unique()) if 'disciplina' in df.columns else ["Português"])
         tema_cad = c2.text_input("Conteúdo")
         dif_cad = c3.select_slider("Dificuldade", options=["Fácil", "Médio", "Difícil"])
         ano_cad = c4.text_input("Ano")
-        fonte_cad = st.text_input("Fonte")
+        
+        fonte_cad = st.text_input("Fonte/Origem (Ex: ENEM 2024)")
         texto_base_cad = st.text_area("Texto Base")
-        url_img_cad = st.text_input("Link da Imagem")
-        comando_cad = st.text_area("Comando")
+        comando_cad = st.text_area("Comando da Questão")
+        
+        st.write("🖼️ **Imagem da Questão**")
+        img_upload = st.file_uploader("Selecione um arquivo de imagem", type=["png", "jpg", "jpeg"])
+        
         alts_cad = st.text_input("Alternativas (A;B;C;D;E)")
-        gab_cad = st.text_input("Gabarito")
-        if st.form_submit_button("Salvar"): st.info("Adicione os dados na planilha!")
+        gab_cad = st.text_input("Gabarito (A, B, C, D ou E)")
+        
+        if st.form_submit_button("Confirmar e Salvar"):
+            if not comando_cad:
+                st.error("O comando da questão é obrigatório!")
+            else:
+                with st.spinner("Processando cadastro..."):
+                    # 1. Upload imagem para Drive
+                    url_imagem = ""
+                    if img_upload:
+                        url_imagem = upload_para_drive(img_upload)
+                    
+                    # 2. Criar nova linha
+                    novo_id = int(df['id'].max() + 1) if not df.empty else 1
+                    nova_questao = pd.DataFrame([{
+                        "id": novo_id,
+                        "disciplina": disc_cad,
+                        "conteudo": tema_cad,
+                        "dificuldade": dif_cad,
+                        "ano": ano_cad,
+                        "fonte": fonte_cad,
+                        "texto_base": texto_base_cad,
+                        "comando": comando_cad,
+                        "alternativas": alts_cad,
+                        "gabarito": gab_cad,
+                        "imagem": url_imagem
+                    }])
+                    
+                    # 3. Atualizar Sheets
+                    try:
+                        df_final = pd.concat([df, nova_questao], ignore_index=True)
+                        conn.update(data=df_final)
+                        st.success(f"✅ Questão {novo_id:02d} salva com sucesso!")
+                        st.balloons()
+                    except Exception as e:
+                        st.error(f"Erro ao salvar na planilha: {e}")
 
 with aba_gerar:
-    with st.expander("🏫 Configurações da Instituição", expanded=True):
+    with st.expander("🏫 Configurações da Instituição", expanded=False):
         c_nome, c_valor = st.columns([3, 1])
         nome_inst = c_nome.text_input("Nome da Escola", "Escola Municipal Cônego Francisco Pereira da Silva")
         valor_total = c_valor.text_input("Valor Total", "10,0")
@@ -131,15 +203,13 @@ with aba_gerar:
         df_selecionado = df[df['id'].isin(ids_selecionados)].set_index('id')
         df_prova = df_selecionado.loc[ids_selecionados].reset_index()
 
-        # --- NOVO: SELETOR DE FORMATO INDIVIDUAL ---
         st.subheader("⚙️ Definir formato por questão")
         formatos_escolhidos = []
         col_ajuste = st.columns(min(len(df_prova), 5))
         for idx, row in df_prova.iterrows():
             with col_ajuste[idx % 5]:
-                # Sugere Objetiva se houver alternativas na planilha, senão Subjetiva
-                default_format = "Objetiva" if pd.notna(row.get('alternativas')) and str(row['alternativas']).strip() != "" else "Subjetiva"
-                f = st.selectbox(f"Q{idx+1:02d}", ["Objetiva", "Subjetiva"], index=0 if default_format == "Objetiva" else 1, key=f"fmt_{row['id']}")
+                def_fmt = "Objetiva" if pd.notna(row.get('alternativas')) and str(row['alternativas']).strip() != "" else "Subjetiva"
+                f = st.selectbox(f"Q{idx+1:02d}", ["Objetiva", "Subjetiva"], index=0 if def_fmt == "Objetiva" else 1, key=f"fmt_{row['id']}")
                 formatos_escolhidos.append(f)
 
         img_sme = f'<img src="data:image/png;base64,{sme_b64}" style="max-height: 60px;">' if sme_b64 else ""
@@ -158,29 +228,23 @@ with aba_gerar:
 
         html_corpo = ""
         for i, row in df_prova.iterrows():
-            num_formatado = f"{i+1:02d}"
+            num_f = f"{i+1:02d}"
             ano = f" - {row['ano']}" if pd.notna(row.get('ano')) else ""
-            t_base_content = str(row.get('texto_base', '')).strip()
-            t_base_html = f'<span class="texto-base">{t_base_content}</span>' if t_base_content else ""
+            t_base = str(row.get('texto_base', '')).strip()
             
             img_tag = ""
             if 'imagem' in row and pd.notna(row['imagem']) and str(row['imagem']).strip() != "":
-                link_convertido = converter_link_drive(str(row['imagem']))
-                img_tag = f'<img src="{link_convertido}" class="quest-img">'
-            
-            comando_html = f'<span class="comando-questao">{row["comando"]}</span>'
+                img_tag = f'<img src="{converter_link_drive(row["imagem"])}" class="quest-img">'
             
             html_corpo += f"""
             <div class="quest-box">
-                <b>QUESTÃO {num_formatado}</b> ({row["fonte"]}{ano})
+                <b>QUESTÃO {num_f}</b> ({row["fonte"]}{ano})
                 <div class="container-enunciado">
-                    {t_base_html}
-                    {img_tag if img_tag else ""}
-                    {comando_html}
+                    <span class="texto-base">{t_base}</span>
+                    {img_tag}
+                    <span class="comando-questao">{row["comando"]}</span>
                 </div>
             """
-            
-            # FORMATO CONFORME ESCOLHA NO SELETOR
             if formatos_escolhidos[i] == "Objetiva":
                 alts = str(row['alternativas']).split(';')
                 html_corpo += "<ul>"
@@ -189,21 +253,17 @@ with aba_gerar:
                 html_corpo += "</ul>"
             else:
                 html_corpo += "<div style='border:1px dashed #ccc; height:100px; margin-top:10px;'></div>"
-            
             html_corpo += "</div>"
 
-        # CARTÃO RESPOSTA INTELIGENTE
         if add_cartao:
             def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
             cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">{img_sme}<b style="font-size:14pt;">CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
             cartao_html += """<div class="instrucoes-cartao"><b>NORMAS DE PREENCHIMENTO:</b>
                 <p>● Utilize exclusivamente <b>caneta esferográfica azul ou preta</b>.</p>
                 <p>● Preencha <b>totalmente</b> o círculo correspondente à alternativa correta.</p>
-                <p>● Marque apenas <b>uma alternativa</b> por questão; rasuras invalidam a resposta.</p>
-                <p>● Não utilize corretivos e evite dobrar este cartão.</p></div>"""
+                <p>● Marque apenas <b>uma alternativa</b> por questão.</p></div>"""
             cartao_html += f'<div class="cartao-identificacao">NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(48)}</div>NÚMERO: {grid(2)}      TURMA: {grid(6)}      DATA: {grid(2)}/{grid(2)}/{grid(2)}</div>'
             cartao_html += '<div class="columns-container">'
-            
             for c in range(0, len(df_prova), 12):
                 cartao_html += '<div class="column"><div class="cartao-header-row"><div style="width:50px; text-align:center; border-right:1px solid #000;">QUESTÃO</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
                 for i in range(c, min(c + 12, len(df_prova))):
@@ -211,10 +271,9 @@ with aba_gerar:
                         bubbles = "<span style='font-size:8pt; color:#999;'>--- SUBJETIVA ---</span>"
                     else:
                         bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
-                    
                     cartao_html += f'<div class="cartao-row"><div class="q-num-col">{i+1:02d}</div><div class="bubbles-col">{bubbles}</div></div>'
                 cartao_html += '</div>'
-            cartao_html += '</div><div class="assinatura-container"><div class="assinatura-box">ASSINATURA DO ESTUDANTE</div></div></div>'
+            cartao_html += '</div></div>'
             html_corpo += cartao_html
 
         if add_gab:
