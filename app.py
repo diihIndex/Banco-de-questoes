@@ -43,7 +43,6 @@ CSS_ESTILOS = r"""
         background-color: white !important; 
         color: black !important; 
         padding: 20px; 
-        border-radius: 5px;
     }
     
     .print-container * { color: black !important; }
@@ -167,7 +166,23 @@ with aba_gerar:
             num = f"{i+1:02d}"
             t_base_content = str(row["texto_base"]) if pd.notna(row.get('texto_base')) else ""
             comando_content = str(row['comando'])
-            ano_quest = f" - {int(row['ano'])}" if pd.notna(row.get('ano')) else ""
+            
+            # --- Lógica para Fonte e Ano (Removendo "nan") ---
+            fonte_val = str(row.get('fonte', '')).strip()
+            ano_val = str(row.get('ano', '')).strip()
+            
+            info_label = ""
+            if fonte_val and fonte_val.lower() != "nan":
+                info_label = fonte_val
+                if ano_val and ano_val.lower() != "nan":
+                    # Tenta formatar ano como inteiro se for numérico
+                    try: ano_val = str(int(float(ano_val)))
+                    except: pass
+                    info_label += f" - {ano_val}"
+            
+            ref_final = f" ({info_label})" if info_label else ""
+            # -----------------------------------------------
+
             img_url = converter_link_drive(row['imagem']) if pd.notna(row.get('imagem')) else None
             
             if img_url:
@@ -178,7 +193,7 @@ with aba_gerar:
             
             html_corpo += f"""
             <div class="quest-box">
-                <b>QUESTÃO {num}</b> ({row.get('fonte', 'Autor')}{ano_quest})
+                <b>QUESTÃO {num}</b>{ref_final}
                 <div class="container-enunciado">{bloco_enunciado}</div>"""
             
             if formatos_escolhidos[i] == "Objetiva":
@@ -253,5 +268,4 @@ with aba_gerar:
 
         btn_print = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:15px 30px; background:#4CAF50; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">🖨️ Imprimir / Salvar PDF</button></div>'
         
-        # O segredo do Dark Mode está no wrapper <div class="print-container">
         st.components.v1.html(f"<html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn_print}<div class='print-container'>{html_cabecalho}{html_corpo}</div></body></html>", height=900, scrolling=True)
