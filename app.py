@@ -38,7 +38,17 @@ def limpar_coluna(nome):
 # --- 2. CONFIGURAÇÕES VISUAIS (CSS) ---
 CSS_ESTILOS = r"""
 <style>
-    body { font-family: 'Arial', sans-serif; font-size: 12pt; color: black; margin: 0; }
+    /* Força o container principal a ser sempre branco com texto preto (ignora Dark Mode) */
+    .print-container { 
+        background-color: white !important; 
+        color: black !important; 
+        padding: 20px; 
+        border-radius: 5px;
+    }
+    
+    .print-container * { color: black !important; }
+
+    body { font-family: 'Arial', sans-serif; font-size: 12pt; margin: 0; }
     .header-table { width: 100%; border: 2px solid black; border-collapse: collapse; margin-bottom: 15px; }
     .header-table td { border: 1px solid black; padding: 8px; vertical-align: middle; }
     .quest-box { margin-bottom: 20px; page-break-inside: avoid; line-height: 1.5; }
@@ -48,27 +58,27 @@ CSS_ESTILOS = r"""
     
     /* Grid de Identificação */
     .grid-container { display: flex; margin-top: 3px; margin-bottom: 5px; flex-wrap: wrap; }
-    .grid-box { width: 22px; height: 30px; border: 1.2px solid black; margin-right: -1.2px; display: inline-block; }
+    .grid-box { width: 22px; height: 30px; border: 1.2px solid black; margin-right: -1.2px; display: inline-block; background: white !important; }
     
     /* Cartão Resposta */
-    .cartao-page { page-break-before: always; border: 2px solid black; padding: 15px 25px; margin-top: 5px; }
-    .instrucoes-cartao { border: 1.5px solid black; padding: 10px 15px; margin-bottom: 15px; font-size: 10pt; background-color: #fcfcfc; }
+    .cartao-page { page-break-before: always; border: 2px solid black; padding: 15px 25px; margin-top: 5px; background: white !important; }
+    .instrucoes-cartao { border: 1.5px solid black; padding: 10px 15px; margin-bottom: 15px; font-size: 10pt; background-color: #fcfcfc !important; }
     .instrucoes-cartao p { margin: 3px 0; line-height: 1.2; }
     
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 15px; justify-content: flex-start; }
-    .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 210px; }
+    .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 210px; background: white !important; }
     .cartao-row { display: flex; align-items: center; height: 32px; border-bottom: 0.5px solid #ccc; }
     .q-num-col { width: 45px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11pt; }
     .bubbles-col { display: flex; gap: 8px; padding: 0 10px; align-items: center; }
-    .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9pt; font-weight: bold; }
+    .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9pt; font-weight: bold; background: white !important; }
     
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; }
     .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-    .gabarito-item { width: 110px; border: 1px solid #ccc; padding: 5px; text-align: center; font-size: 11pt; }
+    .gabarito-item { width: 110px; border: 1px solid #ccc; padding: 5px; text-align: center; font-size: 11pt; background: white !important; }
     
     ul { list-style-type: none; padding-left: 0; }
     li { margin-bottom: 8px; }
-    @media print { .no-print { display: none; } }
+    @media print { .no-print { display: none; } .print-container { padding: 0; } }
 </style>
 """
 
@@ -157,6 +167,7 @@ with aba_gerar:
             num = f"{i+1:02d}"
             t_base_content = str(row["texto_base"]) if pd.notna(row.get('texto_base')) else ""
             comando_content = str(row['comando'])
+            ano_quest = f" - {int(row['ano'])}" if pd.notna(row.get('ano')) else ""
             img_url = converter_link_drive(row['imagem']) if pd.notna(row.get('imagem')) else None
             
             if img_url:
@@ -167,7 +178,7 @@ with aba_gerar:
             
             html_corpo += f"""
             <div class="quest-box">
-                <b>QUESTÃO {num}</b> ({row.get('fonte', 'Autor')})
+                <b>QUESTÃO {num}</b> ({row.get('fonte', 'Autor')}{ano_quest})
                 <div class="container-enunciado">{bloco_enunciado}</div>"""
             
             if formatos_escolhidos[i] == "Objetiva":
@@ -241,4 +252,6 @@ with aba_gerar:
             html_corpo += '</div></div>'
 
         btn_print = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:15px 30px; background:#4CAF50; color:white; border:none; border-radius:8px; cursor:pointer; font-size:16px;">🖨️ Imprimir / Salvar PDF</button></div>'
-        st.components.v1.html(f"<html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn_print}{html_cabecalho}{html_corpo}</body></html>", height=900, scrolling=True)
+        
+        # O segredo do Dark Mode está no wrapper <div class="print-container">
+        st.components.v1.html(f"<html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn_print}<div class='print-container'>{html_cabecalho}{html_corpo}</div></body></html>", height=900, scrolling=True)
