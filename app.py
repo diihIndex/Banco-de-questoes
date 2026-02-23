@@ -178,7 +178,7 @@ with aba_gerar:
             cartao_html = f"""
             <div class="cartao-page">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    {img_sme}<b style="font-size:16pt;">{tipo_doc} - CARTÃO-RESPOSTA OFICIAL</b>{img_esc}
+                    {img_sme}<b style="font-size:16pt;">{tipo_doc} <br> <br> CARTÃO-RESPOSTA OFICIAL</b>{img_esc}
                 </div>
                 
                 <div class="instrucoes-cartao">
