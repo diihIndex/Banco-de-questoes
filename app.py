@@ -42,7 +42,8 @@ CSS_ESTILOS = r"""
     .header-table { width: 100%; border: 2px solid black; border-collapse: collapse; margin-bottom: 15px; }
     .header-table td { border: 1px solid black; padding: 8px; vertical-align: middle; }
     .quest-box { margin-bottom: 20px; page-break-inside: avoid; line-height: 1.4; }
-    .texto-base { font-style: italic; display: block; margin-bottom: 8px; }
+    .texto-base { font-style: italic; display: inline; margin-right: 5px; }
+    .comando-questao { display: inline; }
     .quest-img { display: block; margin: 10px auto; max-width: 70%; max-height: 280px; border: 1px solid #ddd; }
     
     /* Grid de Identificação */
@@ -154,14 +155,21 @@ with aba_gerar:
         html_corpo = ""
         for i, row in df_prova.iterrows():
             num = f"{i+1:02d}"
-            t_base = f'<span class="texto-base">{row["texto_base"]}</span>' if pd.notna(row.get('texto_base')) else ""
+            t_base_content = str(row["texto_base"]) if pd.notna(row.get('texto_base')) else ""
+            comando_content = str(row['comando'])
             img_url = converter_link_drive(row['imagem']) if pd.notna(row.get('imagem')) else None
-            img_tag = f'<img src="{img_url}" class="quest-img">' if img_url else ""
+            
+            # LÓGICA DE JUNÇÃO: Se não tem imagem, junta texto_base e comando no mesmo bloco
+            if img_url:
+                img_tag = f'<img src="{img_url}" class="quest-img">'
+                bloco_enunciado = f'<span class="texto-base">{t_base_content}</span>{img_tag}<div class="comando-questao">{comando_content}</div>'
+            else:
+                bloco_enunciado = f'<div class="comando-questao"><span class="texto-base">{t_base_content}</span> {comando_content}</div>'
             
             html_corpo += f"""
             <div class="quest-box">
                 <b>QUESTÃO {num}</b> ({row.get('fonte', 'Autor')})
-                <div class="container-enunciado">{t_base}{img_tag}<div>{row['comando']}</div></div>"""
+                <div class="container-enunciado">{bloco_enunciado}</div>"""
             
             if formatos_escolhidos[i] == "Objetiva":
                 alts = str(row['alternativas']).split(';')
