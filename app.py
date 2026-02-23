@@ -50,17 +50,17 @@ CSS_ESTILOS = r"""
     .grid-container { display: flex; margin-top: 3px; margin-bottom: 5px; flex-wrap: wrap; }
     .grid-box { width: 22px; height: 30px; border: 1.2px solid black; margin-right: -1.2px; display: inline-block; }
     
-    /* Cartão Resposta Compacto */
-    .cartao-page { page-break-before: always; border: 2px solid black; padding: 10px 20px; margin-top: 5px; }
-    .instrucoes-cartao { border: 1.5px solid black; padding: 5px 10px; margin-bottom: 10px; font-size: 9pt; background-color: #fcfcfc; }
-    .instrucoes-cartao p { margin: 1px 0; line-height: 1.1; }
+    /* Cartão Resposta */
+    .cartao-page { page-break-before: always; border: 2px solid black; padding: 15px 25px; margin-top: 5px; }
+    .instrucoes-cartao { border: 1.5px solid black; padding: 10px 15px; margin-bottom: 15px; font-size: 10pt; background-color: #fcfcfc; }
+    .instrucoes-cartao p { margin: 3px 0; line-height: 1.2; }
     
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 15px; justify-content: flex-start; }
     .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 210px; }
-    .cartao-row { display: flex; align-items: center; height: 30px; border-bottom: 0.5px solid #ccc; }
-    .q-num-col { width: 45px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10pt; }
-    .bubbles-col { display: flex; gap: 6px; padding: 0 8px; align-items: center; }
-    .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8.5pt; font-weight: bold; }
+    .cartao-row { display: flex; align-items: center; height: 32px; border-bottom: 0.5px solid #ccc; }
+    .q-num-col { width: 45px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11pt; }
+    .bubbles-col { display: flex; gap: 8px; padding: 0 10px; align-items: center; }
+    .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9pt; font-weight: bold; }
     
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; }
     .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -187,20 +187,24 @@ with aba_gerar:
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 5px;">
                     {img_sme}
                     <div style="text-align: center;">
-                        <h4 style="margin: 0; text-transform: uppercase;">{tipo_doc}</h4>
-                        <h5 style="margin: 0; letter-spacing: 1px;">CARTÃO-RESPOSTA OFICIAL</h5>
+                        <h3 style="margin: 0; text-transform: uppercase;">{tipo_doc}</h3>
+                        <h4 style="margin: 0; letter-spacing: 2px;">CARTÃO-RESPOSTA OFICIAL</h4>
                     </div>
                     {img_esc}
                 </div>
                 
                 <div class="instrucoes-cartao">
-                    <b>NORMAS:</b> Use caneta azul ou preta. Preencha totalmente o círculo. Sem rasuras.
+                    <b>NORMAS DE PREENCHIMENTO:</b>
+                    <p>● Utilize exclusivamente <b>caneta esferográfica azul ou preta</b>.</p>
+                    <p>● Preencha <b>totalmente</b> o círculo correspondente à alternativa correta.</p>
+                    <p>● Marque apenas <b>uma alternativa</b> por questão; rasuras invalidam a resposta.</p>
+                    <p>● Não utilize corretivos e evite dobrar este cartão.</p>
                 </div>
 
                 <div style="margin-bottom: 10px;">
                     NOME COMPLETO DO ESTUDANTE:<br>
                     <div class="grid-container">{grid(48)}</div>
-                    <div style="display:flex; gap:20px;">
+                    <div style="display:flex; gap:25px;">
                         <div>NÚMERO: <div class="grid-container">{grid(3)}</div></div>
                         <div>TURMA: <div class="grid-container">{grid(8)}</div></div>
                         <div>DATA: <div class="grid-container">{grid(2)}/{grid(2)}/{grid(2)}</div></div>
@@ -209,10 +213,10 @@ with aba_gerar:
                 <div class="columns-container">"""
             
             for c in range(0, len(df_prova), 12):
-                cartao_html += '<div class="column"><div style="background:#eee; display:flex; font-weight:bold; border-bottom:1.5px solid #000; font-size: 8pt; height:22px; align-items:center;"><div style="width:45px; text-align:center; border-right:1px solid #000;">Q.</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
+                cartao_html += '<div class="column"><div style="background:#eee; display:flex; font-weight:bold; border-bottom:1.5px solid #000; font-size: 8pt; height:25px; align-items:center;"><div style="width:45px; text-align:center; border-right:1px solid #000;">Q.</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
                 for i in range(c, min(c + 12, len(df_prova))):
                     if formatos_escolhidos[i] == "Subjetiva":
-                        bubbles = "<span style='font-size:7.5pt; color:#999;'>--- SUBJETIVA ---</span>"
+                        bubbles = "<span style='font-size:8pt; color:#999;'>--- SUBJETIVA ---</span>"
                     else:
                         bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
                     
@@ -222,7 +226,7 @@ with aba_gerar:
             cartao_html += """
                 </div>
                 <div style="margin-top: 15px; display: flex; justify-content: flex-end;">
-                    <div style="border-top: 1.5px solid #000; width: 350px; text-align: center; padding-top: 2px; font-size: 9.5pt; font-weight: bold;">
+                    <div style="border-top: 1.5px solid #000; width: 350px; text-align: center; padding-top: 3px; font-size: 10pt; font-weight: bold;">
                         ASSINATURA DO ESTUDANTE
                     </div>
                 </div>
