@@ -41,33 +41,33 @@ CSS_ESTILOS = r"""
     body { font-family: 'Arial', sans-serif; font-size: 12pt; color: black; margin: 0; }
     .header-table { width: 100%; border: 2px solid black; border-collapse: collapse; margin-bottom: 15px; }
     .header-table td { border: 1px solid black; padding: 8px; vertical-align: middle; }
-    .quest-box { margin-bottom: 20px; page-break-inside: avoid; line-height: 1.4; }
+    .quest-box { margin-bottom: 20px; page-break-inside: avoid; line-height: 1.5; }
     .texto-base { font-style: italic; display: inline; margin-right: 5px; }
     .comando-questao { display: inline; }
     .quest-img { display: block; margin: 10px auto; max-width: 70%; max-height: 280px; border: 1px solid #ddd; }
     
-    /* Grid de Identificação */
+    /* Grid de Identificação (Quadradinhos do Nome) */
     .grid-container { display: flex; margin-top: 5px; margin-bottom: 10px; flex-wrap: wrap; }
-    .grid-box { width: 18px; height: 24px; border: 1.2px solid black; margin-right: -1.2px; display: inline-block; }
+    .grid-box { width: 22px; height: 30px; border: 1.2px solid black; margin-right: -1.2px; display: inline-block; }
     
     /* Cartão Resposta */
     .cartao-page { page-break-before: always; border: 2px solid black; padding: 30px; margin-top: 20px; }
-    .instrucoes-cartao { border: 1.5px solid black; padding: 15px; margin-bottom: 25px; font-size: 9pt; background-color: #fcfcfc; }
+    .instrucoes-cartao { border: 1.5px solid black; padding: 15px; margin-bottom: 25px; font-size: 10pt; background-color: #fcfcfc; }
     .instrucoes-cartao p { margin: 3px 0; line-height: 1.2; }
     
     .columns-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 25px; justify-content: flex-start; }
     .column { display: flex; flex-direction: column; border: 1.5px solid #000; min-width: 220px; }
-    .cartao-row { display: flex; align-items: center; height: 32px; border-bottom: 0.5px solid #ccc; }
-    .q-num-col { width: 50px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10pt; }
+    .cartao-row { display: flex; align-items: center; height: 35px; border-bottom: 0.5px solid #ccc; }
+    .q-num-col { width: 50px; font-weight: bold; text-align: center; border-right: 2.5px solid black; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11pt; }
     .bubbles-col { display: flex; gap: 8px; padding: 0 10px; align-items: center; }
-    .bubble-circle { width: 22px; height: 22px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: bold; }
+    .bubble-circle { width: 24px; height: 24px; border: 1.5px solid black; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9pt; font-weight: bold; }
     
     .gabarito-section { page-break-before: always; border-top: 2px dashed black; padding-top: 20px; }
     .gabarito-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-    .gabarito-item { width: 100px; border: 1px solid #ccc; padding: 5px; text-align: center; }
+    .gabarito-item { width: 110px; border: 1px solid #ccc; padding: 5px; text-align: center; font-size: 11pt; }
     
     ul { list-style-type: none; padding-left: 0; }
-    li { margin-bottom: 5px; }
+    li { margin-bottom: 8px; }
     @media print { .no-print { display: none; } }
 </style>
 """
@@ -159,7 +159,6 @@ with aba_gerar:
             comando_content = str(row['comando'])
             img_url = converter_link_drive(row['imagem']) if pd.notna(row.get('imagem')) else None
             
-            # LÓGICA DE JUNÇÃO: Se não tem imagem, junta texto_base e comando no mesmo bloco
             if img_url:
                 img_tag = f'<img src="{img_url}" class="quest-img">'
                 bloco_enunciado = f'<span class="texto-base">{t_base_content}</span>{img_tag}<div class="comando-questao">{comando_content}</div>'
@@ -204,7 +203,7 @@ with aba_gerar:
 
                 <div style="margin-bottom: 35px;">
                     NOME COMPLETO DO ESTUDANTE:<br>
-                    <div class="grid-container" style="margin-bottom:20px;">{grid(48)}</div>
+                    <div class="grid-container" style="margin-bottom:15px;">{grid(48)}</div>
                     <div style="display:flex; gap:25px;">
                         <div>NÚMERO: <div class="grid-container">{grid(3)}</div></div>
                         <div>TURMA: <div class="grid-container">{grid(8)}</div></div>
@@ -214,10 +213,10 @@ with aba_gerar:
                 <div class="columns-container">"""
             
             for c in range(0, len(df_prova), 12):
-                cartao_html += '<div class="column"><div style="background:#eee; display:flex; font-weight:bold; border-bottom:1.5px solid #000; font-size: 7.5pt;"><div style="width:50px; text-align:center; border-right:1px solid #000;">QUESTÃO</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
+                cartao_html += '<div class="column"><div style="background:#eee; display:flex; font-weight:bold; border-bottom:1.5px solid #000; font-size: 8pt;"><div style="width:50px; text-align:center; border-right:1px solid #000;">QUESTÃO</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
                 for i in range(c, min(c + 12, len(df_prova))):
                     if formatos_escolhidos[i] == "Subjetiva":
-                        bubbles = "<span style='font-size:7pt; color:#999;'>--- SUBJETIVA ---</span>"
+                        bubbles = "<span style='font-size:8pt; color:#999;'>--- SUBJETIVA ---</span>"
                     else:
                         bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
                     
@@ -227,7 +226,7 @@ with aba_gerar:
             cartao_html += """
                 </div>
                 <div style="margin-top: 70px; display: flex; justify-content: flex-end;">
-                    <div style="border-top: 1.5px solid #000; width: 380px; text-align: center; padding-top: 5px; font-size: 9pt; font-weight: bold;">
+                    <div style="border-top: 1.5px solid #000; width: 380px; text-align: center; padding-top: 5px; font-size: 10pt; font-weight: bold;">
                         ASSINATURA DO ESTUDANTE
                     </div>
                 </div>
