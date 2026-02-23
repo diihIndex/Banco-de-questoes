@@ -39,7 +39,6 @@ CSS_ESTILOS = r"""
     
     .quest-box { margin-bottom: 20px; page-break-inside: avoid; line-height: 1.3; }
     
-    /* AJUSTE DE FLUXO CONTÍNUO */
     .texto-base { font-style: italic; display: inline; }
     .comando-questao { display: inline; margin-left: 5px; }
     .container-enunciado { margin-top: 5px; }
@@ -131,7 +130,9 @@ with aba_gerar:
         sel_dif = f3.multiselect("Dificuldade", ["Fácil", "Médio", "Difícil"])
         df_filter = df_f1[df_f1['conteudo'].isin(sel_tema)] if sel_tema else df_f1
         if sel_dif: df_filter = df_filter[df_filter['dificuldade'].isin(sel_dif)]
-        formato = st.radio("Estilo das Questões", ["Objetiva", "Subjetiva"], horizontal=True)
+        
+        # MUDANÇA: Novo modo "Misto (Automático)"
+        formato = st.radio("Estilo das Questões", ["Misto (Automático)", "Objetiva", "Subjetiva"], horizontal=True)
         add_cartao, add_gab = st.checkbox("Incluir Cartão-Resposta", value=True), st.checkbox("Incluir Gabarito", value=True)
 
     df_filter['label'] = df_filter['id'].astype(str) + " | " + df_filter['comando'].astype(str).str[:70] + "..."
@@ -139,8 +140,6 @@ with aba_gerar:
 
     if selecao:
         ids_selecionados = [int(s.split(" | ")[0]) for s in selecao]
-        
-        # GARANTE A ORDEM DE SELEÇÃO: criamos uma lista baseada na ordem dos IDs selecionados
         df_selecionado = df[df['id'].isin(ids_selecionados)].set_index('id')
         df_prova = df_selecionado.loc[ids_selecionados].reset_index()
         
@@ -160,7 +159,7 @@ with aba_gerar:
 
         html_corpo = ""
         for i, row in df_prova.iterrows():
-            num_formatado = f"{i+1:02d}" # Formata 1 como 01, 2 como 02, etc.
+            num_formatado = f"{i+1:02d}"
             ano = f" - {row['ano']}" if pd.notna(row.get('ano')) else ""
             t_base_content = str(row.get('texto_base', '')).strip()
             t_base_html = f'<span class="texto-base">{t_base_content}</span>' if t_base_content else ""
@@ -181,16 +180,23 @@ with aba_gerar:
                     {comando_html}
                 </div>
             """
-            if formato == "Objetiva":
+            
+            # LÓGICA DE FORMATO INDIVIDUAL
+            tem_alts = pd.notna(row.get('alternativas')) and str(row['alternativas']).strip() != ""
+            
+            if formato == "Objetiva" or (formato == "Misto (Automático)" and tem_alts):
                 alts = str(row['alternativas']).split(';')
                 html_corpo += "<ul>"
                 for idx, alt in enumerate(alts):
                     if idx < 5: html_corpo += f"<li>{['A','B','C','D','E'][idx]}) {alt.strip()}</li>"
                 html_corpo += "</ul>"
-            else: html_corpo += "<div style='border:1px dashed #ccc; height:100px; margin-top:10px;'></div>"
+            else:
+                html_corpo += "<div style='border:1px dashed #ccc; height:100px; margin-top:10px;'></div>"
+            
             html_corpo += "</div>"
 
-        if add_cartao and formato == "Objetiva":
+        # CARTÃO RESPOSTA (Ajustado para o modo Misto)
+        if add_cartao and (formato != "Subjetiva"):
             def grid(n): return "".join(['<div class="grid-box"></div>' for _ in range(n)])
             cartao_html = f'<div class="cartao-page"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">{img_sme}<b style="font-size:14pt;">CARTÃO-RESPOSTA OFICIAL</b>{img_esc}</div>'
             cartao_html += """<div class="instrucoes-cartao"><b>NORMAS DE PREENCHIMENTO:</b>
@@ -200,11 +206,19 @@ with aba_gerar:
                 <p>● Não utilize corretivos e evite dobrar este cartão.</p></div>"""
             cartao_html += f'<div class="cartao-identificacao">NOME COMPLETO DO ESTUDANTE:<br><div class="grid-container">{grid(48)}</div>NÚMERO: {grid(2)}      TURMA: {grid(6)}      DATA: {grid(2)}/{grid(2)}/{grid(2)}</div>'
             cartao_html += '<div class="columns-container">'
-            num_q = len(df_prova)
-            for c in range(0, num_q, 12):
+            
+            for c in range(0, len(df_prova), 12):
                 cartao_html += '<div class="column"><div class="cartao-header-row"><div style="width:50px; text-align:center; border-right:1px solid #000;">QUESTÃO</div><div style="flex:1; text-align:center;">RESPOSTA</div></div>'
-                for i in range(c, min(c + 12, num_q)):
-                    bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
+                for i in range(c, min(c + 12, len(df_prova))):
+                    row_q = df_prova.iloc[i]
+                    tem_alts_q = pd.notna(row_q.get('alternativas')) and str(row_q['alternativas']).strip() != ""
+                    
+                    # No modo misto, se a questão for subjetiva, mostramos o número mas bloqueamos as bolinhas
+                    if formato == "Misto (Automático)" and not tem_alts_q:
+                        bubbles = "<span style='font-size:8pt; color:#999;'>--- SUBJETIVA ---</span>"
+                    else:
+                        bubbles = "".join([f'<div class="bubble-circle">{l}</div>' for l in ['A','B','C','D','E']])
+                    
                     cartao_html += f'<div class="cartao-row"><div class="q-num-col">{i+1:02d}</div><div class="bubbles-col">{bubbles}</div></div>'
                 cartao_html += '</div>'
             cartao_html += '</div><div class="assinatura-container"><div class="assinatura-box">ASSINATURA DO ESTUDANTE</div></div></div>'
@@ -213,9 +227,10 @@ with aba_gerar:
         if add_gab:
             html_corpo += '<div class="gabarito-section"><h3>GABARITO</h3><div class="gabarito-grid">'
             for i, row in df_prova.iterrows():
-                html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{row.get("gabarito"," ")}</b></div>'
+                gab_val = row.get("gabarito"," ") if pd.notna(row.get("gabarito")) else "---"
+                html_corpo += f'<div class="gabarito-item">Q{i+1:02d}: <b>{gab_val}</b></div>'
             html_corpo += '</div></div>'
 
         btn = '<div class="no-print" style="text-align:center; margin:20px;"><button onclick="window.print()" style="padding:10px 20px; background:#4CAF50; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">🖨️ Gerar Documento de Impressão</button></div>'
-        html_final = f"<!DOCTYPE html><html>{MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn}{html_cabecalho}{html_corpo}</body></html>"
+        html_final = f"<!DOCTYPE html><html>{MATH_AND_PRINT if 'MATH_AND_PRINT' in locals() else MATHJAX_AND_PRINT}{CSS_ESTILOS}<body>{btn}{html_cabecalho}{html_corpo}</body></html>"
         st.components.v1.html(html_final, height=800, scrolling=True)
